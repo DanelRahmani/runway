@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CategoryBreakdown } from "@/components/charts/CategoryBreakdown";
 import { BalanceChartPanel } from "@/components/forecast/BalanceChartPanel";
 import { DonutChart } from "@/components/charts/DonutChart";
+import { GranularityToggle } from "@/components/forecast/GranularityToggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -23,12 +24,6 @@ import { formatCents } from "@/lib/money";
 import { exportProjectionToCsv } from "@/lib/storage/backup";
 import { cn } from "@/lib/utils";
 import type { Forecast, Granularity, Projection, ProjectionPeriod } from "@/types/forecast";
-
-const GRANULARITIES: ReadonlyArray<{ value: Granularity; label: string }> = [
-  { value: "daily", label: "Daily" },
-  { value: "weekly", label: "Weekly" },
-  { value: "monthly", label: "Monthly" },
-];
 
 interface OverviewTabProps {
   forecast: Forecast;
@@ -95,35 +90,6 @@ export function OverviewTab({ forecast, projection }: OverviewTabProps) {
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
-}
-
-function GranularityToggle({
-  value,
-  onChange,
-}: {
-  value: Granularity;
-  onChange: (value: Granularity) => void;
-}) {
-  return (
-    <div className="bg-muted inline-flex items-center gap-0.5 rounded-lg p-0.5" role="group" aria-label="Chart granularity">
-      {GRANULARITIES.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          aria-pressed={value === option.value}
-          onClick={() => onChange(option.value)}
-          className={cn(
-            "focus-visible:ring-ring rounded-md px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none",
-            value === option.value
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {option.label}
-        </button>
-      ))}
     </div>
   );
 }

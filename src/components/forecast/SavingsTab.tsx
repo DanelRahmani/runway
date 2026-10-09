@@ -2,17 +2,19 @@ import { PiggyBankIcon, TargetIcon } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 
 import { DonutChart } from "@/components/charts/DonutChart";
+import { StackedCompositionChart } from "@/components/charts/StackedCompositionChart";
 import { AnimatedMoney } from "@/components/forecast/AnimatedMoney";
+import { GranularityToggle } from "@/components/forecast/GranularityToggle";
 import { Field } from "@/components/forms/Field";
 import { MoneyInput } from "@/components/forms/MoneyInput";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { formatIsoDate } from "@/lib/dates";
-import { goalProgress, savingsSummary } from "@/lib/forecast/savings";
+import { compositionSeries, goalProgress, savingsSummary } from "@/lib/forecast/savings";
 import { formatCents } from "@/lib/money";
 import { cn, formatPercent } from "@/lib/utils";
-import type { Currency, Forecast, ForecastGoal, Projection } from "@/types/forecast";
+import type { Currency, Forecast, ForecastGoal, Granularity, Projection } from "@/types/forecast";
 
 interface SavingsTabProps {
   forecast: Forecast;
@@ -30,6 +32,9 @@ interface SavingsTabProps {
 export function SavingsTab({ forecast, projection, onGoalChange }: SavingsTabProps) {
   const currency = forecast.currency;
   const summary = useMemo(() => savingsSummary(projection), [projection]);
+  // Monthly by default: the mix moves on a monthly rhythm, and weekly columns
+  // make it hard to see that rhythm through the noise.
+  const [compositionStep, setCompositionStep] = useState<Granularity>("monthly");
 
   const keptSlices = summary.keptByCategory.map((total) => ({
     key: `${total.direction}-${total.category}`,
@@ -136,6 +141,30 @@ export function SavingsTab({ forecast, projection, onGoalChange }: SavingsTabPro
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader className="flex-row flex-wrap items-start justify-between gap-3">
+          <div className="flex flex-col gap-1">
+            <CardTitle>How the mix changes</CardTitle>
+            <CardDescription>
+              The same three parts as above, kept apart by period. A tax quarter and a quiet month
+              look identical once added up, which is the one thing a donut cannot show.
+            </CardDescription>
+          </div>
+          <GranularityToggle
+            value={compositionStep}
+            onChange={setCompositionStep}
+            options={["weekly", "monthly"]}
+          />
+        </CardHeader>
+        <CardContent>
+          <StackedCompositionChart
+            periods={compositionSeries(projection, compositionStep)}
+            currency={currency}
+            granularity={compositionStep}
+          />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import { foldToDonutSlices } from "@/lib/donut";
 import { runProjection } from "@/lib/forecast/engine";
-import { goalProgress, keptCurve, savingsSummary } from "@/lib/forecast/savings";
+import {
+  compositionSeries,
+  goalProgress,
+  keptCurve,
+  savingsSummary,
+} from "@/lib/forecast/savings";
 import type {
   Forecast,
   IsoDate,
@@ -258,5 +263,71 @@ describe("kept curve and goals", () => {
     expect(progress.inconclusive).toBe(false);
     expect(progress.onTrack).toBe(false);
     expect(progress.shortfallCents).toBe(10_000_000 - progress.keptCents);
+  });
+});
+
+describe("composition over time", () => {
+  const mixed = makeForecast({
+    oneOffItems: [
+      oneOff(50_000, "Housing", "2026-01-05"),
+      oneOff(30_000, "Savings", "2026-01-06"),
+      oneOff(20_000, "Tax", "2026-01-07"),
+      oneOff(70_000, "Groceries", "2026-02-05"),
+      oneOff(10_000, "Savings", "2026-02-06"),
+    ],
+  });
+
+  it("splits each period into spending, kept and tax", () => {
+    const january = compositionSeries(runProjection(mixed), "monthly").find(
+      (period) => period.startDate === "2026-01-01",
+    );
+
+    expect(january?.spendingCents).toBe(50_000);
+    expect(january?.keptCents).toBe(30_000);
+    expect(january?.taxCents).toBe(20_000);
+  });
+
+  it("keeps periods apart instead of collapsing them into one total", () => {
+    // This is the whole point of the chart: January and February must not merge.
+    const february = compositionSeries(runProjection(mixed), "monthly").find(
+      (period) => period.startDate === "2026-02-01",
+    );
+
+    expect(february?.spendingCents).toBe(70_000);
+    expect(february?.keptCents).toBe(10_000);
+    expect(february?.taxCents).toBe(0);
+  });
+
+  it("adds back up to the same totals as the flat summary", () => {
+    const projection = runProjection(mixed);
+    const periods = compositionSeries(projection, "monthly");
+    const summary = savingsSummary(projection);
+    const total = (pick: (period: (typeof periods)[number]) => number) =>
+      periods.reduce((sum, period) => sum + pick(period), 0);
+
+    expect(total((period) => period.spendingCents)).toBe(summary.spendingCents);
+    expect(total((period) => period.keptCents)).toBe(summary.keptCents);
+    expect(total((period) => period.taxCents)).toBe(summary.taxCents);
+  });
+
+  it("produces finer columns at finer granularity", () => {
+    const projection = runProjection(mixed);
+    const weekly = compositionSeries(projection, "weekly");
+    const monthly = compositionSeries(projection, "monthly");
+
+    expect(monthly.length).toBeGreaterThan(1);
+    expect(weekly.length).toBeGreaterThan(monthly.length);
+    expect(compositionSeries(projection, "daily")).toHaveLength(projection.days.length);
+  });
+
+  it("leaves periods with no outflows empty rather than negative", () => {
+    const quiet = makeForecast({ oneOffItems: [oneOff(10_000, "Housing", "2026-03-05")] });
+    const periods = compositionSeries(runProjection(quiet), "monthly");
+
+    for (const period of periods) {
+      expect(period.spendingCents).toBeGreaterThanOrEqual(0);
+      expect(period.keptCents).toBeGreaterThanOrEqual(0);
+      expect(period.taxCents).toBeGreaterThanOrEqual(0);
+    }
   });
 });

@@ -197,6 +197,13 @@ export interface ProjectionDay {
 
 export type Granularity = "daily" | "weekly" | "monthly";
 
+/** Display labels for the granularity steps, kept beside the type so they agree. */
+export const GRANULARITY_LABELS: Record<Granularity, string> = {
+  daily: "Daily",
+  weekly: "Weekly",
+  monthly: "Monthly",
+};
+
 export interface ProjectionPeriod {
   /** Stable key for React lists: the period start date. */
   key: IsoDate;

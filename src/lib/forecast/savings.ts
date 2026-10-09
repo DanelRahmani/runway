@@ -1,6 +1,13 @@
 import { isTransferCategory, sumCategoryTotals, TAX_CATEGORY } from "@/lib/categories";
+import { aggregate } from "@/lib/forecast/aggregate";
 import { categoryTotals } from "@/lib/forecast/engine";
-import type { CategoryTotal, ForecastGoal, IsoDate, Projection } from "@/types/forecast";
+import type {
+  CategoryTotal,
+  ForecastGoal,
+  Granularity,
+  IsoDate,
+  Projection,
+} from "@/types/forecast";
 
 /** Average Gregorian month, used to turn a horizon into a monthly pace. */
 const DAYS_PER_MONTH = 30.4375;
@@ -63,6 +70,60 @@ export function savingsSummary(projection: Projection): SavingsSummary {
     monthlyKeptCents: months === 0 ? 0 : Math.round(keptCents / months),
     keptByCategory,
   };
+}
+
+export interface CompositionPeriod {
+  key: string;
+  startDate: IsoDate;
+  endDate: IsoDate;
+  spendingCents: number;
+  keptCents: number;
+  taxCents: number;
+}
+
+/**
+ * The outflow mix, period by period, rather than collapsed into one total.
+ *
+ * A donut shows composition at a single moment and hides all of the structure
+ * behind it — a tax quarter looks exactly like a quiet month once summed. This
+ * keeps time on the x-axis so the mix can be seen changing.
+ *
+ * Period boundaries come from `aggregate`, so the columns line up exactly with
+ * the cash-flow table rather than being bucketed a second way.
+ */
+export function compositionSeries(
+  projection: Projection,
+  granularity: Granularity,
+): CompositionPeriod[] {
+  const periods: CompositionPeriod[] = aggregate(projection.days, granularity).map((period) => ({
+    key: period.key,
+    startDate: period.startDate,
+    endDate: period.endDate,
+    spendingCents: 0,
+    keptCents: 0,
+    taxCents: 0,
+  }));
+
+  // Periods are contiguous and in order, so one forward walk covers every day
+  // without searching: a day is never before the period the cursor sits on.
+  let index = 0;
+  for (const day of projection.days) {
+    while (index < periods.length - 1 && day.date > (periods[index]?.endDate ?? "")) {
+      index += 1;
+    }
+
+    const period = periods[index];
+    if (period === undefined) continue;
+
+    for (const entry of day.entries) {
+      if (entry.direction !== "OUTFLOW") continue;
+      if (isTransferCategory(entry.category)) period.keptCents += entry.amountCents;
+      else if (entry.category === TAX_CATEGORY) period.taxCents += entry.amountCents;
+      else period.spendingCents += entry.amountCents;
+    }
+  }
+
+  return periods;
 }
 
 export interface KeptPoint {
