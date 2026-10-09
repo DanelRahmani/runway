@@ -58,6 +58,14 @@ const TAB_LABELS: Record<TabValue, string> = {
   data: "Data",
 };
 
+/**
+ * Tabs that make no sense on a household forecast.
+ *
+ * A household raises no invoices — the engine already generates none for it —
+ * and a scenario is only meaningful against a business plan.
+ */
+const PERSONAL_HIDDEN_TABS: ReadonlySet<TabValue> = new Set<TabValue>(["invoices", "scenarios"]);
+
 export function ForecastPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -67,8 +75,18 @@ export function ForecastPage() {
   const { forecast, loading, notFound, saveState, update, lastError } = useForecastEditor(id);
   const { forecasts } = useForecasts();
 
+  /*
+   * The filter applies to the selected tab as well as to the list: a bookmarked
+   * ?tab=invoices on a personal forecast would otherwise render a panel with no
+   * trigger to navigate away from.
+   */
+  const visibleTabs: readonly TabValue[] =
+    forecast?.forecastKind === "PERSONAL"
+      ? TABS.filter((tab) => !PERSONAL_HIDDEN_TABS.has(tab))
+      : TABS;
+
   const requestedTab = searchParams.get("tab");
-  const activeTab: TabValue = TABS.includes(requestedTab as TabValue)
+  const activeTab: TabValue = visibleTabs.includes(requestedTab as TabValue)
     ? (requestedTab as TabValue)
     : "overview";
 
@@ -263,7 +281,7 @@ export function ForecastPage() {
       <Tabs value={activeTab} onValueChange={setTab} className="flex flex-col gap-4">
         <div className="scrollbar-thin -mx-1 overflow-x-auto px-1 pb-0.5">
           <TabsList className="w-max">
-            {TABS.map((tab) => (
+            {visibleTabs.map((tab) => (
               <TabsTrigger key={tab} value={tab}>
                 {TAB_LABELS[tab]}
                 {tab === "scenarios" && scenarios.length > 0 ? (

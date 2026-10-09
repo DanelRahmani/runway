@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { CategoryBreakdown } from "@/components/charts/CategoryBreakdown";
 import { BalanceChartPanel } from "@/components/forecast/BalanceChartPanel";
+import { DonutChart } from "@/components/charts/DonutChart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -15,6 +16,8 @@ import {
   TableWrapper,
 } from "@/components/ui/table";
 import { aggregate } from "@/lib/forecast/aggregate";
+import { categoryTotals } from "@/lib/forecast/engine";
+import { sumCategoryTotals } from "@/lib/categories";
 import { formatIsoDate, formatIsoDateRange } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
 import { exportProjectionToCsv } from "@/lib/storage/backup";
@@ -36,6 +39,15 @@ export function OverviewTab({ forecast, projection }: OverviewTabProps) {
   const [granularity, setGranularity] = useState<Granularity>("weekly");
 
   const periods = aggregate(projection.days, granularity);
+
+  // Income runs to a handful of categories at most, which is what makes a donut
+  // readable here — unlike the twenty-category spending list beside it.
+  const incomeTotals = categoryTotals(projection).filter((total) => total.direction === "INFLOW");
+  const incomeSlices = incomeTotals.map((total) => ({
+    key: `${total.direction}-${total.category}`,
+    label: total.category,
+    cents: total.totalCents,
+  }));
 
   return (
     <div className="flex flex-col gap-4">
@@ -62,8 +74,26 @@ export function OverviewTab({ forecast, projection }: OverviewTabProps) {
       <ProjectionTable periods={periods} currency={forecast.currency} granularity={granularity} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <CategoryBreakdown projection={projection} currency={forecast.currency} variant="spending" />
-        <CategoryBreakdown projection={projection} currency={forecast.currency} variant="income" />
+        <CategoryBreakdown projection={projection} currency={forecast.currency} />
+        <Card>
+          <CardHeader>
+            <CardTitle>Where income comes from</CardTitle>
+            <CardDescription>
+              {incomeTotals.length === 0
+                ? "No income in this horizon."
+                : `${formatCents(sumCategoryTotals(incomeTotals), forecast.currency)} across ${incomeTotals.length} categor${incomeTotals.length === 1 ? "y" : "ies"} over the horizon.`}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {incomeTotals.length === 0 ? (
+              <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-xs leading-relaxed">
+                Add income with a category to see this breakdown.
+              </p>
+            ) : (
+              <DonutChart slices={incomeSlices} currency={forecast.currency} />
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
