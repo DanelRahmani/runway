@@ -2,7 +2,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 
 import { formatIsoDate, formatIsoDateRange } from "@/lib/dates";
 import type { CompositionPeriod } from "@/lib/forecast/savings";
-import { formatCents, formatCentsCompact } from "@/lib/money";
+import { formatCents, formatCentsTick } from "@/lib/money";
 import type { Currency, Granularity } from "@/types/forecast";
 
 /**
@@ -73,7 +73,7 @@ export function StackedCompositionChart({
             />
             <YAxis
               width={72}
-              tickFormatter={(value: number) => formatCentsCompact(value, currency)}
+              tickFormatter={(value: number) => formatCentsTick(value, currency)}
               tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
               tickLine={false}
               axisLine={false}

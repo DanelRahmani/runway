@@ -302,6 +302,24 @@ export function formatCentsCompact(cents: number, currency: Currency, locale?: s
 }
 
 /**
+ * Compact money for an axis tick.
+ *
+ * A tick is a **coordinate, not an amount**. It comes out of the charting
+ * library's own tick algorithm, and that algorithm is free to land between whole
+ * cents — it does so whenever the plotted range is narrow, because an explicit
+ * axis domain pins ticks to its own endpoints. Handing such a value to
+ * `formatCentsCompact` threw, which took the whole chart down over a rounded
+ * label.
+ *
+ * So this rounds first, and `formatCents` and `formatCentsCompact` keep the assert
+ * that still guards real money. If an amount reaches those with a fraction, that
+ * is a bug worth failing on; a label two thirds of a cent below its tick is not.
+ */
+export function formatCentsTick(cents: number, currency: Currency, locale?: string): string {
+  return formatCentsCompact(Number.isFinite(cents) ? Math.round(cents) : 0, currency, locale);
+}
+
+/**
  * The currency's symbol, for compact pickers where the code alone is ambiguous.
  *
  * Falls back to the code when a locale has no symbol for it — the point is to be

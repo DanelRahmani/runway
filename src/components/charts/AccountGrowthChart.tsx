@@ -18,7 +18,7 @@ import {
 } from "@/components/charts/chart-utils";
 import { growthRows, type AccountSeriesPoint } from "@/lib/forecast/accounts";
 import { formatIsoDate } from "@/lib/dates";
-import { formatCents, formatCentsCompact } from "@/lib/money";
+import { formatCents, formatCentsTick } from "@/lib/money";
 import type { Account, Currency } from "@/types/forecast";
 
 interface AccountGrowthChartProps {
@@ -107,7 +107,7 @@ export function AccountGrowthChart({
             <YAxis
               domain={domain}
               width={72}
-              tickFormatter={(value: number) => formatCentsCompact(value, currency)}
+              tickFormatter={(value: number) => formatCentsTick(value, currency)}
               tick={{ fontSize: 11, fill: CHART_COLORS.muted }}
               tickLine={false}
               axisLine={false}

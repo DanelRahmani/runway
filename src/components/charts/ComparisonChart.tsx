@@ -12,7 +12,7 @@ import {
 
 import { CHART_COLORS, boundsOf, paddedDomain } from "@/components/charts/chart-utils";
 import { formatIsoDate } from "@/lib/dates";
-import { formatCents, formatCentsCompact } from "@/lib/money";
+import { formatCents, formatCentsTick } from "@/lib/money";
 import type { ChartPoint, Currency, IsoDate } from "@/types/forecast";
 
 interface ComparisonChartProps {
@@ -90,7 +90,7 @@ export function ComparisonChart({
           <YAxis
             domain={domain}
             width={72}
-            tickFormatter={(value: number) => formatCentsCompact(value, currency)}
+            tickFormatter={(value: number) => formatCentsTick(value, currency)}
             tick={{ fontSize: 11, fill: CHART_COLORS.muted }}
             tickLine={false}
             axisLine={false}

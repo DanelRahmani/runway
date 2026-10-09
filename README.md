@@ -434,6 +434,12 @@ units. Parsing goes through digit-wise logic rather than `Number(x) * 100`, and
 `assertIntegerCents` throws if a fractional value ever reaches the engine. Formatting with
 `Intl.NumberFormat` is the only place a division happens, and that is presentation, not accounting.
 
+**A chart tick is a coordinate, not an amount.** Axis bounds are padded outwards to whole cents, and
+tick labels go through `formatCentsTick`, which rounds. Both are needed: an explicit `domain` makes
+Recharts pin ticks to its own endpoints, so a narrow range produces labels like `54320.16`, and
+handing one of those to the amount formatter threw and took the page down. Amounts still assert —
+only ticks round.
+
 **Dates are calendar dates, not instants.** Forecast dates are `YYYY-MM-DD` strings handled purely
 through `Date.UTC` and `getUTC*`, so a rent payment cannot shift by a day because of a timezone.
 

@@ -36,7 +36,14 @@ export function paddedDomain(bounds: SeriesBounds): [number, number] {
   if (min === 0 && max === 0) return [-100, 100];
   const span = max - min;
   const pad = span === 0 ? Math.abs(max) * 0.2 || 100 : span * 0.08;
-  return [min - pad, max + pad];
+  /*
+   * Rounded outwards to whole cents. A cent is the smallest amount that exists
+   * here, so an axis bound of 54320.16 is not a number the app can mean — and an
+   * explicit domain makes the charting library pin ticks to its own endpoints,
+   * which then comes back as fractional tick labels for a money axis to format.
+   * Floor and ceil rather than round, so the padding is never reduced away.
+   */
+  return [Math.floor(min - pad), Math.ceil(max + pad)];
 }
 
 /**
