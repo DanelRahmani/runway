@@ -31,12 +31,8 @@ export function readStoredTheme(): Theme {
   } catch {
     // localStorage can be blocked entirely; fall through to the default.
   }
-  /*
-   * Dark, not "system", because dark is how this dashboard is meant to be seen
-   * and figures carry better against it. "system" is still a real choice in the
-   * switcher — it is just no longer what a visitor gets by default.
-   */
-  return "dark";
+  // Nobody has expressed a preference, so follow the operating system.
+  return "system";
 }
 
 export function systemPrefersDark(): boolean {
@@ -50,13 +46,21 @@ export function resolveTheme(theme: Theme, prefersDark: boolean): ResolvedTheme 
 }
 
 /**
- * Adds or removes the `dark` class that the Tailwind `@custom-variant` keys off.
+ * Adds or removes the `dark` class that the Tailwind `@custom-variant` keys off,
+ * and repaints the browser's own chrome to match.
  *
- * Touching the DOM is exactly what an effect is for, which is why this stays
- * separate from the hook's state.
+ * The `theme-color` meta tag cannot be driven by a media query once a preference
+ * is stored: someone on a dark OS who picks light would keep dark browser chrome.
+ * Setting it here follows the *resolved* theme rather than the operating system,
+ * so the surround always agrees with the page.
  */
 export function applyResolvedTheme(resolved: ResolvedTheme): void {
   document.documentElement.classList.toggle("dark", resolved === "dark");
+
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta !== null) {
+    meta.setAttribute("content", resolved === "dark" ? "#07080b" : "#f7f8fa");
+  }
 }
 
 export interface ThemeController {

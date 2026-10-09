@@ -85,6 +85,15 @@ export function RecurringTab({ forecast, projection, update }: RecurringTabProps
     [forecast.recurringItems],
   );
 
+  /** What the ticked rows actually do to the horizon, so the bar can say so. */
+  const selectedImpactCents = useMemo(
+    () =>
+      forecast.recurringItems
+        .filter((item) => selection.ids.has(item.id))
+        .reduce((total, item) => total + impactCents(impacts, item.id), 0),
+    [forecast.recurringItems, selection.ids, impacts],
+  );
+
   const visible = useMemo(() => {
     const filtered = forecast.recurringItems.filter(
       (item) =>
@@ -139,10 +148,20 @@ export function RecurringTab({ forecast, projection, update }: RecurringTabProps
     setCategory(ALL_FILTER);
   };
 
-  /** Applies one category to everything selected, in a single write. */
+  /**
+   * Applies one category to everything selected, in a single write.
+   *
+   * Undoable because a bulk edit has no dialog between the click and the write:
+   * it is the easiest action in the app to fire by accident.
+   */
   const applyCategory = (next: string | undefined): void => {
     const targets = selection.ids;
     if (targets.size === 0) return;
+
+    // Captured so the previous labels can be put back.
+    const previous = forecast.recurringItems
+      .filter((item) => targets.has(item.id))
+      .map((item) => ({ id: item.id, category: item.category }));
 
     update((current) => ({
       ...current,
@@ -152,6 +171,22 @@ export function RecurringTab({ forecast, projection, update }: RecurringTabProps
       }),
     }));
     selection.clear();
+
+    showUndoToast(
+      `Recategorised ${previous.length} item${previous.length === 1 ? "" : "s"}.`,
+      () => {
+        update((current) => ({
+          ...current,
+          recurringItems: current.recurringItems.map((item) => {
+            const before = previous.find((entry) => entry.id === item.id);
+            if (before === undefined) return item;
+            return before.category === undefined
+              ? withoutCategory(item)
+              : { ...item, category: before.category };
+          }),
+        }));
+      },
+    );
   };
 
   /** Deletes the whole selection, then offers one undo for all of it. */
@@ -230,6 +265,9 @@ export function RecurringTab({ forecast, projection, update }: RecurringTabProps
             {selection.count > 0 ? (
               <BulkBar
                 count={selection.count}
+                currency={forecast.currency}
+                summaryCents={selectedImpactCents}
+                summaryLabel="net over the horizon"
                 existing={categories}
                 forecastKind={forecast.forecastKind}
                 onApplyCategory={applyCategory}

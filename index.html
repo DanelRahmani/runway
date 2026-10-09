@@ -3,10 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="color-scheme" content="dark light" />
-    <meta name="theme-color" content="#f7f8fa" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#07080b" media="(prefers-color-scheme: dark)" />
-    <meta name="theme-color" content="#07080b" />
+    <meta name="color-scheme" content="light dark" />
+    <!-- Set by the pre-paint script below and kept in step by applyResolvedTheme. -->
+    <meta name="theme-color" content="#f7f8fa" />
 
     <title>Runway — Know when your cash runs out</title>
     <meta
@@ -39,18 +38,19 @@
     <script>
       // Apply the stored theme before first paint to avoid a flash of the wrong theme.
       (function () {
-        var dark = true;
+        var dark = false;
         try {
           var stored = localStorage.getItem("runway.theme");
-          if (stored === "light") dark = false;
-          else if (stored === "system") {
-            dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-          }
-          // Anything else — "dark" or nothing stored — is dark by default.
+          // Anything other than an explicit choice follows the operating system.
+          dark =
+            stored === "dark" ||
+            (stored !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
         } catch (_) {
-          /* localStorage unavailable — dark is still the default */
+          /* localStorage unavailable - fall back to the light theme */
         }
         if (dark) document.documentElement.classList.add("dark");
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute("content", dark ? "#07080b" : "#f7f8fa");
       })();
     </script>
   </head>

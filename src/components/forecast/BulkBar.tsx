@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { categorySuggestions } from "@/lib/categories";
-import type { ForecastKind } from "@/types/forecast";
+import { formatCents } from "@/lib/money";
+import type { Currency, ForecastKind } from "@/types/forecast";
 
 const SELECT_CLASS =
   "border-input bg-background focus-visible:border-ring focus-visible:ring-ring/40 h-8 rounded-md border px-2 text-xs outline-none focus-visible:ring-[3px]";
@@ -49,6 +50,14 @@ export function SelectionCheckbox({
 
 interface BulkBarProps {
   count: number;
+  currency: Currency;
+  /**
+   * What the selection is worth, so a bulk change is made with the amount in
+   * front of you rather than from memory of which rows were ticked.
+   */
+  summaryCents: number;
+  /** What that total means, e.g. "net over the horizon". */
+  summaryLabel: string;
   /** Categories already present in this list, offered first. */
   existing: readonly string[];
   forecastKind: ForecastKind | undefined;
@@ -66,6 +75,9 @@ interface BulkBarProps {
  */
 export function BulkBar({
   count,
+  currency,
+  summaryCents,
+  summaryLabel,
   existing,
   forecastKind,
   onApplyCategory,
@@ -81,9 +93,12 @@ export function BulkBar({
 
   return (
     <div className="bg-accent/10 ring-accent/25 flex flex-wrap items-center gap-2 rounded-lg px-3 py-2 ring-1">
-      <span className="flex items-center gap-1.5 text-xs font-medium">
-        <CheckSquareIcon className="size-3.5" aria-hidden="true" />
+      <span className="flex flex-wrap items-baseline gap-1.5 text-xs font-medium">
+        <CheckSquareIcon className="size-3.5 self-center" aria-hidden="true" />
         {count} selected
+        <span className="text-muted-foreground tnum font-normal">
+          · {formatCents(summaryCents, currency, { signed: summaryCents > 0 })} {summaryLabel}
+        </span>
       </span>
 
       <label className="flex items-center">

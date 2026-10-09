@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 export interface Selection {
   /** The selected ids, with any that no longer exist already dropped. */
@@ -22,6 +22,8 @@ export interface Selection {
  * 2. **Ids that no longer exist are filtered out on read rather than repaired in an
  *    effect.** An item deleted in another tab, or by an undo, simply stops being
  *    selected; there is no second state to keep in step.
+ * 3. **Escape clears it.** A bulk edit is the one action here that writes many rows
+ *    at once, so it gets a keyboard way out that matches how Escape closes a dialog.
  */
 export function useSelection(allIds: readonly string[]): Selection {
   const [raw, setRaw] = useState<ReadonlySet<string>>(() => new Set<string>());
@@ -52,6 +54,20 @@ export function useSelection(allIds: readonly string[]): Selection {
   }, []);
 
   const clear = useCallback(() => setRaw(new Set<string>()), []);
+
+  useEffect(() => {
+    if (ids.size === 0) return;
+
+    const onKeyDown = (event: KeyboardEvent): void => {
+      // Escape belongs to the dialog while one is open.
+      if (event.key !== "Escape") return;
+      if (document.querySelector('[role="dialog"]') !== null) return;
+      clear();
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [ids.size, clear]);
 
   return {
     ids,

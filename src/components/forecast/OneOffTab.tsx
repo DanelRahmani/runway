@@ -64,6 +64,19 @@ export function OneOffTab({ forecast, update }: OneOffTabProps) {
   const itemIds = useMemo(() => forecast.oneOffItems.map((item) => item.id), [forecast.oneOffItems]);
   const selection = useSelection(itemIds);
 
+  /** Net of the ticked rows, in the direction each one actually moves money. */
+  const selectedTotalCents = useMemo(
+    () =>
+      forecast.oneOffItems
+        .filter((item) => selection.ids.has(item.id))
+        .reduce(
+          (total, item) =>
+            total + (item.direction === "INFLOW" ? item.amountCents : -item.amountCents),
+          0,
+        ),
+    [forecast.oneOffItems, selection.ids],
+  );
+
   const categories = useMemo(() => distinctCategories(forecast.oneOffItems), [forecast.oneOffItems]);
   const horizonEnd = horizonEndDate(forecast.startDate, forecast.horizon);
 
@@ -113,10 +126,20 @@ export function OneOffTab({ forecast, update }: OneOffTabProps) {
     setCategory(ALL_FILTER);
   };
 
-  /** Applies one category to everything selected, in a single write. */
+  /**
+   * Applies one category to everything selected, in a single write.
+   *
+   * Undoable because a bulk edit has no dialog between the click and the write:
+   * it is the easiest action in the app to fire by accident.
+   */
   const applyCategory = (next: string | undefined): void => {
     const targets = selection.ids;
     if (targets.size === 0) return;
+
+    // Captured so the previous labels can be put back.
+    const previous = forecast.oneOffItems
+      .filter((item) => targets.has(item.id))
+      .map((item) => ({ id: item.id, category: item.category }));
 
     update((current) => ({
       ...current,
@@ -126,6 +149,22 @@ export function OneOffTab({ forecast, update }: OneOffTabProps) {
       }),
     }));
     selection.clear();
+
+    showUndoToast(
+      `Recategorised ${previous.length} item${previous.length === 1 ? "" : "s"}.`,
+      () => {
+        update((current) => ({
+          ...current,
+          oneOffItems: current.oneOffItems.map((item) => {
+            const before = previous.find((entry) => entry.id === item.id);
+            if (before === undefined) return item;
+            return before.category === undefined
+              ? withoutCategory(item)
+              : { ...item, category: before.category };
+          }),
+        }));
+      },
+    );
   };
 
   /** Deletes the whole selection, then offers one undo for all of it. */
@@ -217,6 +256,9 @@ export function OneOffTab({ forecast, update }: OneOffTabProps) {
             {selection.count > 0 ? (
               <BulkBar
                 count={selection.count}
+                currency={forecast.currency}
+                summaryCents={selectedTotalCents}
+                summaryLabel="net in total"
                 existing={categories}
                 forecastKind={forecast.forecastKind}
                 onApplyCategory={applyCategory}

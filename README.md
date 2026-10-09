@@ -71,8 +71,14 @@ the curve, because that is what actually happens to your cash.
 Every item table has a checkbox column. Tick rows and a bar appears that applies one category to the
 whole selection, or deletes it after a single confirmation — with one undo for the entire set.
 
+The bar states what the selection is worth before you touch it: a bulk change is made with the amount
+in view rather than from memory of which rows were ticked. Recategorising is undoable too, not just
+deleting — it is the easiest action in the app to fire by accident, and the one that used to have no
+way back.
+
 The select-all box shows a partial state when only some rows are ticked. Selection deliberately
-survives filtering, so the count keeps telling the truth about what a bulk change will touch.
+survives filtering, so the count keeps telling the truth about what a bulk change will touch. Escape
+clears the selection, matching how Escape closes a dialog.
 
 ### Savings, accounts and goals
 A dedicated **Savings** tab, which reports *flows* rather than balances:
@@ -348,8 +354,8 @@ tests/
 **Visual language.** Modern fintech: a cool neutral ground, a vivid rose accent, and depth from
 layered surfaces. It began as an implementation of `DESIGN.md` from
 [danelrahmani.com](https://danelrahmani.com) — warm editorial minimalism, creme cloth and maroon
-thread — and was deliberately moved away from it. **Dark is the default theme**; light and
-"match system" remain real options in the header.
+thread — and was deliberately moved away from it. **The default is "match system"**; light and dark
+remain real options in the header.
 
 | Token | Light | Dark | Role |
 | --- | --- | --- | --- |
@@ -407,10 +413,11 @@ All of it is neutralised by the `prefers-reduced-motion` rule in the base layer.
 > Deliberately no framer-motion. The motion here is bounded and declarative, which CSS covers
 > without shipping a runtime animation library.
 
-**Theme.** Light, dark and "match system" are selectable from the header. The preference is stored in
-`localStorage` under `runway.theme`, and a small inline script in `index.html` applies it before first
-paint so there is no flash of the wrong theme. In "system" mode the app follows the OS and keeps
-following it if the setting changes mid-session.
+**Theme.** Light, dark and "match system" are selectable from the header. **The default is "match
+system"** — the app follows the OS, and keeps following it if the setting changes mid-session. The
+preference is stored in `localStorage` under `runway.theme`, and a small inline script in `index.html`
+applies it before first paint so there is no flash of the wrong theme. That script also sets the
+`theme-color` meta to match, so a light app never sits under dark browser chrome.
 
 **Money is never a float.** Every amount is stored and calculated as an integer number of minor
 units. Parsing goes through digit-wise logic rather than `Number(x) * 100`, and
