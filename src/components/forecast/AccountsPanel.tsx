@@ -1,6 +1,7 @@
 import { CoinsIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 
+import { AccountGrowthChart } from "@/components/charts/AccountGrowthChart";
 import { AnimatedMoney } from "@/components/forecast/AnimatedMoney";
 import { Field } from "@/components/forms/Field";
 import { MoneyInput } from "@/components/forms/MoneyInput";
@@ -47,8 +48,16 @@ export function AccountsPanel({
   const [startingCents, setStartingCents] = useState(0);
   const [ratePercent, setRatePercent] = useState("0");
 
-  const spending = balances.accounts.find((entry) => entry.account.id === SPENDING_ACCOUNT_ID);
-  const pots = balances.accounts.filter((entry) => entry.account.id !== SPENDING_ACCOUNT_ID);
+  const spending = useMemo(
+    () => balances.accounts.find((entry) => entry.account.id === SPENDING_ACCOUNT_ID),
+    [balances.accounts],
+  );
+  const pots = useMemo(
+    () => balances.accounts.filter((entry) => entry.account.id !== SPENDING_ACCOUNT_ID),
+    [balances.accounts],
+  );
+  // Stable reference, so the chart's own memos are not defeated every render.
+  const potAccounts = useMemo(() => pots.map((entry) => entry.account), [pots]);
 
   const parsedRate = Number(ratePercent.replace(",", "."));
   const rateValid = Number.isFinite(parsedRate) && parsedRate >= -20 && parsedRate <= 20;
@@ -162,6 +171,17 @@ export function AccountsPanel({
             </li>
           ) : null}
         </ul>
+
+        {pots.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-medium">How the pots grow</p>
+            <AccountGrowthChart
+              series={balances.series}
+              accounts={potAccounts}
+              currency={currency}
+            />
+          </div>
+        ) : null}
 
         {formOpen ? (
           <form

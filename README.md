@@ -93,6 +93,10 @@ A dedicated **Savings** tab, which reports *flows* rather than balances:
   opening a second one, and keeps the account's id so transfers already pointing at it still do.
   Spendable cash and total wealth are reported separately, because cash is what decides whether you
   run out.
+- **Every pot over time** — a line per account across the whole horizon, so a rate typed into a form
+  becomes a curve you can read. The spending account is left off deliberately: it already has its own
+  chart, and on most forecasts it swings by more across a year than the pots hold between them, which
+  would flatten every growth curve into a straight line.
 - **Assigned transfers are two-sided.** Tag an item as Savings, Investing, Pension or Debt repayment
   and choose which account it goes into: your spending money drops and your wealth does not, so kept
   money stops looking spent.

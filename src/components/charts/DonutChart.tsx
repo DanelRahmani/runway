@@ -1,22 +1,10 @@
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 
+import { seriesColor } from "@/components/charts/chart-utils";
 import { foldToDonutSlices, type DonutSlice } from "@/lib/donut";
 import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import type { Currency } from "@/types/forecast";
-
-const SLICE_COLORS = [
-  "var(--chart-1)",
-  "var(--chart-2)",
-  "var(--chart-3)",
-  "var(--chart-4)",
-  "var(--chart-5)",
-  "var(--chart-6)",
-] as const;
-
-function donutColor(index: number): string {
-  return SLICE_COLORS[index] ?? SLICE_COLORS[SLICE_COLORS.length - 1] ?? "var(--chart-1)";
-}
 
 interface DonutChartProps {
   slices: readonly DonutSlice[];
@@ -66,7 +54,7 @@ export function DonutChart({ slices, currency, height = 176, className }: DonutC
               isAnimationActive={false}
             >
               {data.map((slice, index) => (
-                <Cell key={slice.key} fill={donutColor(index)} />
+                <Cell key={slice.key} fill={seriesColor(index)} />
               ))}
             </Pie>
             <Tooltip content={<DonutTooltip currency={currency} total={total} />} />
@@ -82,7 +70,7 @@ export function DonutChart({ slices, currency, height = 176, className }: DonutC
               <span className="flex min-w-0 items-center gap-2">
                 <span
                   className="inline-block size-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: donutColor(index) }}
+                  style={{ backgroundColor: seriesColor(index) }}
                   aria-hidden="true"
                 />
                 <span className="truncate">{slice.label}</span>

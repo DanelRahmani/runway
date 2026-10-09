@@ -53,3 +53,27 @@ export const CHART_COLORS = {
   grid: "var(--border)",
   muted: "var(--muted-foreground)",
 } as const;
+
+/**
+ * Cycled palette for charts with more than one series.
+ *
+ * The theme colour ramp, in the order it is meant to be read.
+ *
+ * ponytail: wraps rather than generating hues. The ceiling is six visually
+ * distinct series — past six, lines repeat a colour and only the legend and the
+ * tooltip tell them apart. Upgrade path is a perceptual ramp (for example the
+ * Okabe-Ito set) if a chart ever routinely exceeds six series.
+ */
+export const SERIES_COLORS = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+  "var(--chart-6)",
+] as const;
+
+/** Colour for the nth series, cycling once the ramp runs out. */
+export function seriesColor(index: number): string {
+  return SERIES_COLORS[index % SERIES_COLORS.length] ?? "var(--chart-1)";
+}
