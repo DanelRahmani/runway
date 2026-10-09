@@ -1,11 +1,11 @@
 import { useState } from "react";
 
 import { Field } from "@/components/forms/Field";
+import { LineItemFields } from "@/components/forms/LineItemFields";
 import {
   EMPTY_LINE_ITEM_DRAFT,
-  LineItemFields,
   type LineItemDraft,
-} from "@/components/forms/LineItemFields";
+} from "@/components/forms/lineItemDraft";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

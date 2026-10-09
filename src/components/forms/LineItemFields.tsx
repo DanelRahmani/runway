@@ -1,26 +1,10 @@
 import { Field } from "@/components/forms/Field";
 import { MoneyInput } from "@/components/forms/MoneyInput";
 import { Input } from "@/components/ui/input";
+import type { LineItemDraft } from "@/components/forms/lineItemDraft";
 import type { FieldErrors } from "@/lib/validation";
-import type { Currency, Direction } from "@/types/forecast";
+import type { Currency } from "@/types/forecast";
 import { cn } from "@/lib/utils";
-
-/** The fields shared by recurring and one-off entries. */
-export interface LineItemDraft {
-  name: string;
-  direction: Direction;
-  amountCents: number;
-  category: string;
-  note: string;
-}
-
-export const EMPTY_LINE_ITEM_DRAFT: LineItemDraft = {
-  name: "",
-  direction: "OUTFLOW",
-  amountCents: 0,
-  category: "",
-  note: "",
-};
 
 interface LineItemFieldsProps {
   draft: LineItemDraft;
