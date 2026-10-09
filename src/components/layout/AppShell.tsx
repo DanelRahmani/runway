@@ -1,4 +1,4 @@
-import { AlertTriangleIcon, ArrowUpRightIcon, InfoIcon } from "lucide-react";
+import { AlertTriangleIcon, ArrowUpRightIcon, GlobeIcon, InfoIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Disclaimer } from "@/components/layout/Disclaimer";
@@ -43,6 +43,23 @@ export function AppShell({ children, actions, wide = false }: AppShellProps) {
           <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
             {actions}
             <ThemeSwitcher />
+            {/*
+             * Repeated from the footer on purpose: it is the owner's site, and a
+             * reader who wants it should not have to reach the bottom of the page.
+             * The label is dropped below `sm` so it never crowds out the page's own
+             * controls, and `aria-label` still names the link when that happens.
+             */}
+            <a
+              href="https://danelrahmani.com"
+              target="_blank"
+              rel="noreferrer noopener"
+              aria-label="danelrahmani.com — Danel Rahmani's personal website"
+              title="danelrahmani.com"
+              className="text-muted-foreground hover:text-foreground hover:bg-secondary focus-visible:ring-ring inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-xs transition-colors focus-visible:ring-2 focus-visible:outline-none"
+            >
+              <GlobeIcon className="size-3.5" aria-hidden="true" />
+              <span className="hidden sm:inline">danelrahmani.com</span>
+            </a>
           </div>
         </div>
       </header>
