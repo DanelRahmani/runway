@@ -21,7 +21,10 @@ describe("clearing a category", () => {
   });
 
   it("is a no-op on an item that has no category", () => {
-    const cleared = withoutCategory({ id: "c", name: "Misc" });
+    // Typed rather than inline: the generic infers from the argument, and a bare
+    // literal with no `category` property gives it nothing to infer from.
+    const item: { id: string; name: string; category?: string } = { id: "c", name: "Misc" };
+    const cleared = withoutCategory(item);
 
     expect(cleared).toEqual({ id: "c", name: "Misc" });
   });
