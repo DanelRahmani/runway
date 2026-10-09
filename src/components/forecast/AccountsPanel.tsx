@@ -140,29 +140,58 @@ export function AccountsPanel({
         </dl>
 
         <ul className="flex flex-col gap-2">
-          <AccountRow
-            name="Spending"
-            kind="CASH"
-            closingCents={spending?.closingCents ?? 0}
-            growthCents={0}
-            currency={currency}
-            derived
-          />
-          {pots.map((entry) => (
+          <li>
             <AccountRow
-              key={entry.account.id}
-              name={entry.account.name}
-              kind={entry.account.kind}
-              rateBps={entry.account.annualRateBps ?? 0}
-              closingCents={entry.closingCents}
-              growthCents={entry.growthCents}
+              name="Spending"
+              kind="CASH"
+              closingCents={spending?.closingCents ?? 0}
+              growthCents={0}
               currency={currency}
-              editing={editingId === entry.account.id}
-              onEdit={() => openForm(entry.account)}
-              onRemove={() =>
-                onAccountsChange(accounts.filter((account) => account.id !== entry.account.id))
-              }
+              derived
             />
+          </li>
+          {pots.map((entry) => (
+            <li key={entry.account.id} className="flex flex-col">
+              <AccountRow
+                name={entry.account.name}
+                kind={entry.account.kind}
+                rateBps={entry.account.annualRateBps ?? 0}
+                closingCents={entry.closingCents}
+                growthCents={entry.growthCents}
+                currency={currency}
+                editing={editingId === entry.account.id}
+                onEdit={() => openForm(entry.account)}
+                onRemove={() =>
+                  onAccountsChange(accounts.filter((account) => account.id !== entry.account.id))
+                }
+              />
+              {/*
+               * The form unfolds from the row it edits, rather than appearing at
+               * the foot of the card. Editing the fourth account and having the
+               * fields open below the chart is the kind of thing that makes people
+               * check twice which account they are changing.
+               */}
+              {editingId === entry.account.id ? (
+                <AccountForm
+                  title="Edit account"
+                  submitLabel="Save changes"
+                  attached
+                  currency={currency}
+                  name={name}
+                  kind={kind}
+                  startingCents={startingCents}
+                  ratePercent={ratePercent}
+                  rateValid={rateValid}
+                  canSave={canSave}
+                  onNameChange={setName}
+                  onKindChange={setKind}
+                  onStartingChange={setStartingCents}
+                  onRateChange={setRatePercent}
+                  onSubmit={save}
+                  onCancel={closeForm}
+                />
+              ) : null}
+            </li>
           ))}
           {pots.length === 0 && !formOpen ? (
             <li className="text-muted-foreground rounded-lg border border-dashed p-4 text-xs leading-relaxed">
@@ -173,6 +202,28 @@ export function AccountsPanel({
           ) : null}
         </ul>
 
+        {/* Adding has no row to unfold from, so this one sits directly under the list it adds
+            to rather than below the chart and off the bottom of the screen. */}
+        {formOpen && editingId === null ? (
+          <AccountForm
+            title="New account"
+            submitLabel="Add account"
+            currency={currency}
+            name={name}
+            kind={kind}
+            startingCents={startingCents}
+            ratePercent={ratePercent}
+            rateValid={rateValid}
+            canSave={canSave}
+            onNameChange={setName}
+            onKindChange={setKind}
+            onStartingChange={setStartingCents}
+            onRateChange={setRatePercent}
+            onSubmit={save}
+            onCancel={closeForm}
+          />
+        ) : null}
+
         {pots.length > 0 ? (
           <div className="flex flex-col gap-2">
             <p className="text-sm font-medium">How the pots grow</p>
@@ -182,75 +233,6 @@ export function AccountsPanel({
               currency={currency}
             />
           </div>
-        ) : null}
-
-        {formOpen ? (
-          <form
-            className="flex flex-col gap-3 rounded-lg border p-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (canSave) save();
-            }}
-          >
-            <p className="text-sm font-medium">
-              {editingId === null ? "New account" : "Edit account"}
-            </p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field label="Name" htmlFor="account-name" required>
-                <Input
-                  id="account-name"
-                  value={name}
-                  placeholder="e.g. Holiday fund"
-                  autoComplete="off"
-                  onChange={(event) => setName(event.target.value)}
-                />
-              </Field>
-              <Field label="Type" htmlFor="account-kind" required>
-                <select
-                  id="account-kind"
-                  value={kind}
-                  onChange={(event) => setKind(event.target.value as AccountKind)}
-                  className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/40 h-9 w-full rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-                >
-                  {KINDS.map((option) => (
-                    <option key={option} value={option}>
-                      {accountKindLabel(option)}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Starting balance" htmlFor="account-start" hint="What is in it today.">
-                <MoneyInput
-                  valueCents={startingCents}
-                  onValueChange={setStartingCents}
-                  currency={currency}
-                />
-              </Field>
-              <Field
-                label="Annual rate (%)"
-                htmlFor="account-rate"
-                error={rateValid ? undefined : "Use a rate between -20% and 20%"}
-                hint="A percentage a year: 5 means 5%. Leave at 0 for no growth."
-              >
-                <Input
-                  id="account-rate"
-                  value={ratePercent}
-                  inputMode="decimal"
-                  autoComplete="off"
-                  placeholder="0"
-                  onChange={(event) => setRatePercent(event.target.value)}
-                />
-              </Field>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button type="submit" size="sm" disabled={!canSave}>
-                {editingId === null ? "Add account" : "Save changes"}
-              </Button>
-              <Button type="button" variant="ghost" size="sm" onClick={closeForm}>
-                Cancel
-              </Button>
-            </div>
-          </form>
         ) : null}
 
         {balances.hasGrowth ? (
@@ -292,10 +274,12 @@ function AccountRow({
   onRemove?: () => void;
 }) {
   return (
-    <li
+    <div
       className={cn(
         "flex items-center justify-between gap-3 rounded-lg border px-3 py-2",
-        editing && "border-ring bg-muted/40",
+        /* While its form is open the row drops its bottom edge, so the pair reads
+           as one panel rather than two stacked ones. */
+        editing && "border-ring bg-muted/40 rounded-b-none border-b-0",
       )}
     >
       <span className="flex min-w-0 items-center gap-2">
@@ -349,7 +333,120 @@ function AccountRow({
           </span>
         ) : null}
       </span>
-    </li>
+    </div>
+  );
+}
+
+/**
+ * The add and edit form.
+ *
+ * Shared by both jobs so the two cannot drift apart, which is the same reason the
+ * add form was reused for editing in the first place. `attached` only drops the top
+ * corners, for when it is unfolded from a row.
+ */
+function AccountForm({
+  title,
+  submitLabel,
+  attached = false,
+  currency,
+  name,
+  kind,
+  startingCents,
+  ratePercent,
+  rateValid,
+  canSave,
+  onNameChange,
+  onKindChange,
+  onStartingChange,
+  onRateChange,
+  onSubmit,
+  onCancel,
+}: {
+  title: string;
+  submitLabel: string;
+  attached?: boolean;
+  currency: Currency;
+  name: string;
+  kind: AccountKind;
+  startingCents: number;
+  ratePercent: string;
+  rateValid: boolean;
+  canSave: boolean;
+  onNameChange: (value: string) => void;
+  onKindChange: (value: AccountKind) => void;
+  onStartingChange: (cents: number) => void;
+  onRateChange: (value: string) => void;
+  onSubmit: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <form
+      className={cn(
+        "flex flex-col gap-3 border p-4",
+        attached ? "bg-muted/40 rounded-t-none rounded-b-lg" : "rounded-lg",
+      )}
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (canSave) onSubmit();
+      }}
+    >
+      <p className="text-sm font-medium">{title}</p>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field label="Name" htmlFor="account-name" required>
+          <Input
+            id="account-name"
+            value={name}
+            placeholder="e.g. Holiday fund"
+            autoComplete="off"
+            onChange={(event) => onNameChange(event.target.value)}
+          />
+        </Field>
+        <Field label="Type" htmlFor="account-kind" required>
+          <select
+            id="account-kind"
+            value={kind}
+            onChange={(event) => onKindChange(event.target.value as AccountKind)}
+            className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/40 h-9 w-full rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
+          >
+            {KINDS.map((option) => (
+              <option key={option} value={option}>
+                {accountKindLabel(option)}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Starting balance" htmlFor="account-start" hint="What is in it today.">
+          <MoneyInput
+            valueCents={startingCents}
+            onValueChange={onStartingChange}
+            currency={currency}
+          />
+        </Field>
+        <Field
+          label="Annual rate (%)"
+          htmlFor="account-rate"
+          error={rateValid ? undefined : "Use a rate between -20% and 20%"}
+          hint="A percentage a year: 5 means 5%. Leave at 0 for no growth."
+        >
+          <Input
+            id="account-rate"
+            value={ratePercent}
+            inputMode="decimal"
+            autoComplete="off"
+            placeholder="0"
+            onChange={(event) => onRateChange(event.target.value)}
+          />
+        </Field>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" size="sm" disabled={!canSave}>
+          {submitLabel}
+        </Button>
+        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </form>
   );
 }
 

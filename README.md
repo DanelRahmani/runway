@@ -91,9 +91,11 @@ A dedicated **Savings** tab, which reports *flows* rather than balances:
 - **Where the money sits** — add, edit and remove savings, investment, debt or extra cash accounts,
   each with a starting balance and an optional annual rate **as a percentage** (the form says so, and
   the rate is printed back on the account row next to the growth it produced). Editing reuses the add
-  form rather than opening a second one, and keeps the account's id so transfers already pointing at
-  it still do. Spendable cash and total wealth are reported separately, because cash is what decides
-  whether you run out.
+  form rather than opening a second one — and that form **unfolds from the row it edits**, so editing
+  the fourth account does not open its fields at the foot of the card, below the chart. Adding has no
+  row to unfold from, so that form sits directly under the list it adds to. An edit keeps the account's
+  id, so transfers already pointing at it still do. Spendable cash and total wealth are reported
+  separately, because cash is what decides whether you run out.
 - **Every pot over time** — a line per account across the whole horizon, so a rate typed into a form
   becomes a curve you can read. The spending account is left off deliberately: it already has its own
   chart, and on most forecasts it swings by more across a year than the pots hold between them, which
