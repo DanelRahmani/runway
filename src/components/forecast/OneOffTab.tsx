@@ -148,6 +148,7 @@ export function OneOffTab({ forecast, update }: OneOffTabProps) {
                   query={query}
                   onQueryChange={setQuery}
                   filterLabel="category"
+                  filterPlural="categories"
                   filterOptions={categories.map((option) => ({ value: option, label: option }))}
                   filterValue={category}
                   onFilterChange={setCategory}

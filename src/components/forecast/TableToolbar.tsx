@@ -15,8 +15,15 @@ interface TableToolbarProps {
   scope: string;
   query: string;
   onQueryChange: (query: string) => void;
-  /** Label for the filter dimension, e.g. "category" or "status". */
+  /** Singular name of the filter dimension, e.g. "category" or "status". */
   filterLabel: string;
+  /**
+   * The plural, spelled out.
+   *
+   * Appending "s" here produced "All categorys" and "All statuss", so the plural
+   * is supplied rather than derived.
+   */
+  filterPlural: string;
   filterOptions: readonly FilterOption[];
   filterValue: string;
   onFilterChange: (value: string) => void;
@@ -42,6 +49,7 @@ export function TableToolbar({
   query,
   onQueryChange,
   filterLabel,
+  filterPlural,
   filterOptions,
   filterValue,
   onFilterChange,
@@ -95,7 +103,7 @@ export function TableToolbar({
               onChange={(event) => onFilterChange(event.target.value)}
               className={cn(SELECT_CLASS, "sm:w-40")}
             >
-              <option value={ALL_FILTER}>All {filterLabel}s</option>
+              <option value={ALL_FILTER}>All {filterPlural}</option>
               {filterOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}

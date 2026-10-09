@@ -174,6 +174,7 @@ export function InvoicesTab({ forecast, projection, update }: InvoicesTabProps) 
                   query={query}
                   onQueryChange={setQuery}
                   filterLabel="status"
+                  filterPlural="statuses"
                   filterOptions={STATUS_FILTERS}
                   filterValue={status}
                   onFilterChange={setStatus}
