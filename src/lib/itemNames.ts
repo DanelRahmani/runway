@@ -20,10 +20,23 @@ const BOTH: readonly ForecastKind[] = ["PERSONAL", "BUSINESS"];
 
 export const ITEM_NAMES: readonly NameSuggestion[] = [
   /* ------------------------------------------------------ personal income -- */
-  { name: "Salary", kinds: ["PERSONAL"], direction: "INFLOW", category: "Client work" },
-  { name: "Freelance income", kinds: ["PERSONAL"], direction: "INFLOW", category: "Client work" },
-  { name: "Benefits", kinds: ["PERSONAL"], direction: "INFLOW", category: "Client income" },
-  { name: "Refund", kinds: ["PERSONAL"], direction: "INFLOW", category: "Client income" },
+  { name: "Salary", kinds: ["PERSONAL"], direction: "INFLOW", category: "Salary" },
+  // "Client work" is business-only, so a personal freelance line points at the
+  // shared "Client income" bucket rather than a category the picker withholds.
+  { name: "Freelance income", kinds: ["PERSONAL"], direction: "INFLOW", category: "Client income" },
+  { name: "Huurtoeslag", kinds: ["PERSONAL"], direction: "INFLOW", category: "Toeslagen" },
+  { name: "Zorgtoeslag", kinds: ["PERSONAL"], direction: "INFLOW", category: "Toeslagen" },
+  { name: "Kinderopvangtoeslag", kinds: ["PERSONAL"], direction: "INFLOW", category: "Toeslagen" },
+  {
+    name: "Studiefinanciering",
+    kinds: ["PERSONAL"],
+    direction: "INFLOW",
+    category: "Studiefinanciering",
+  },
+  { name: "Uitkering", kinds: ["PERSONAL"], direction: "INFLOW", category: "Benefits" },
+  // Left without a category on purpose: a refund can be tax, a shop return or a
+  // deposit released, and guessing one of those is worse than leaving it blank.
+  { name: "Refund", kinds: ["PERSONAL"], direction: "INFLOW" },
 
   /* ---------------------------------------------------- personal outgoings -- */
   { name: "Rent", kinds: ["PERSONAL"], direction: "OUTFLOW", category: "Housing" },
@@ -48,7 +61,9 @@ export const ITEM_NAMES: readonly NameSuggestion[] = [
   { name: "Client retainer", kinds: ["BUSINESS"], direction: "INFLOW", category: "Client work" },
   { name: "Project payment", kinds: ["BUSINESS"], direction: "INFLOW", category: "Client work" },
   { name: "Consulting fee", kinds: ["BUSINESS"], direction: "INFLOW", category: "Client work" },
-  { name: "Grant", kinds: ["BUSINESS"], direction: "INFLOW", category: "Client income" },
+  // WBSO is a payroll-tax credit in name and a cash inflow in practice.
+  { name: "WBSO", kinds: ["BUSINESS"], direction: "INFLOW", category: "Subsidies" },
+  { name: "Grant", kinds: ["BUSINESS"], direction: "INFLOW", category: "Subsidies" },
 
   /* ---------------------------------------------------- business outgoings -- */
   { name: "Office rent", kinds: ["BUSINESS"], direction: "OUTFLOW", category: "Premises" },

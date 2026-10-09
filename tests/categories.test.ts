@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { categoryEmoji, categorySuggestions } from "@/lib/categories";
+import { ITEM_NAMES } from "@/lib/itemNames";
 import { createStarterForecast } from "@/lib/sample";
 
 const labels = (kind: "PERSONAL" | "BUSINESS" | undefined, direction?: "INFLOW" | "OUTFLOW") =>
@@ -75,5 +76,40 @@ describe("categories are scoped to the forecast kind", () => {
         expect(categoryEmoji(label), `${kind} starter uses "${label}"`).not.toBeNull();
       }
     }
+  });
+});
+
+/*
+ * The starter forecasts are checked above because they are written by hand. The
+ * name chips are the other way a category gets written without the user picking
+ * it, and they had drifted the same way: "Salary" filled in "Client work", which
+ * is business-only, so a personal forecast ended up with a category its own
+ * picker never offers. The item still renders and still totals, which is why it
+ * went unnoticed — it just cannot be seen or chosen again.
+ */
+describe("item name chips only fill categories their own forecast offers", () => {
+  it("points every chip at a category that is in scope for its kind and direction", () => {
+    for (const chip of ITEM_NAMES) {
+      if (chip.category === undefined) continue;
+
+      for (const kind of chip.kinds) {
+        const match = categorySuggestions(kind, chip.direction).find(
+          (category) => category.label === chip.category,
+        );
+
+        expect(match, `"${chip.name}" fills in "${chip.category}", not offered to ${kind}`).toBeDefined();
+        expect(match?.direction, `"${chip.name}" fills in a ${match?.direction} category`).toBe(
+          chip.direction,
+        );
+      }
+    }
+  });
+
+  it("leaves the deliberately uncategorised chips uncategorised", () => {
+    // "Refund" has no honest single category, and the picker is the user's job.
+    const refund = ITEM_NAMES.find((chip) => chip.name === "Refund");
+
+    expect(refund).toBeDefined();
+    expect(refund?.category).toBeUndefined();
   });
 });

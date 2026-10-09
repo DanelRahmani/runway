@@ -52,6 +52,22 @@ const CATEGORY_INPUTS: readonly CategoryInput[] = [
    * business and left a salaried household with nothing that fitted.
    */
   { label: "Salary", emoji: "💵", kinds: ["PERSONAL"], direction: "INFLOW" },
+  /*
+   * Government money coming in, which is neither a salary nor client work.
+   *
+   * A toeslag is modelled as income rather than as a discount on the bill it
+   * covers, because that is what happens to the bank account. Netting
+   * huurtoeslag off the rent instead would flatter the spending figures, and the
+   * savings rate is computed against income — so an allowance that is really
+   * income has to appear as income or the rate lies.
+   *
+   * Dutch names where there is no English one: "allowances" reads as a job
+   * allowance, and nobody looking for huurtoeslag searches for "allowances".
+   */
+  { label: "Toeslagen", emoji: "💶", kinds: ["PERSONAL"], direction: "INFLOW" },
+  { label: "Benefits", emoji: "🤲", kinds: ["PERSONAL"], direction: "INFLOW" },
+  // DUO money is part grant and part loan; an item per part splits it if needed.
+  { label: "Studiefinanciering", emoji: "📚", kinds: ["PERSONAL"], direction: "INFLOW" },
   { label: "Housing", emoji: "🏠", kinds: ["PERSONAL"], direction: "OUTFLOW" },
   { label: "Groceries", emoji: "🛒", kinds: ["PERSONAL"], direction: "OUTFLOW" },
   { label: "Eating out", emoji: "🍽️", kinds: ["PERSONAL"], direction: "OUTFLOW" },
@@ -90,13 +106,17 @@ const CATEGORY_INPUTS: readonly CategoryInput[] = [
   { label: "Subcontractors", emoji: "🤝", kinds: ["BUSINESS"], direction: "OUTFLOW" },
   { label: "Accounting", emoji: "🧮", kinds: ["BUSINESS"], direction: "OUTFLOW" },
   { label: "Legal", emoji: "⚖️", kinds: ["BUSINESS"], direction: "OUTFLOW" },
-  { label: "Insurance", emoji: "🛡️", kinds: ["BUSINESS"], direction: "OUTFLOW" },
+  // Contents, building and liability cover are household costs as much as
+  // business ones, and the "Insurance" name chip is offered to both.
+  { label: "Insurance", emoji: "🛡️", kinds: BOTH, direction: "OUTFLOW" },
   { label: "Equipment", emoji: "📦", kinds: ["BUSINESS"], direction: "OUTFLOW" },
   { label: "Logistics", emoji: "🚚", kinds: ["BUSINESS"], direction: "OUTFLOW" },
   { label: "Banking fees", emoji: "🏦", kinds: ["BUSINESS"], direction: "OUTFLOW" },
   { label: "Events", emoji: "🎪", kinds: ["BUSINESS"], direction: "OUTFLOW" },
 
   /* ----------------------------------------------------------------- both -- */
+  // ISDE and the gemeentelijke regelingen reach households as well as firms.
+  { label: "Subsidies", emoji: "📜", kinds: BOTH, direction: "INFLOW" },
   { label: TAX_CATEGORY, emoji: "🧾", kinds: BOTH, direction: "OUTFLOW" },
   { label: "Travel", emoji: "✈️", kinds: BOTH, direction: "OUTFLOW" },
   { label: "Education", emoji: "🎓", kinds: BOTH, direction: "OUTFLOW" },
