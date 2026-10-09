@@ -1,5 +1,5 @@
 import { DownloadIcon } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 import { CategoryBreakdown } from "@/components/charts/CategoryBreakdown";
 import { BalanceChartPanel } from "@/components/forecast/BalanceChartPanel";
@@ -37,7 +37,10 @@ export function OverviewTab({ forecast, projection }: OverviewTabProps) {
 
   // Income runs to a handful of categories at most, which is what makes a donut
   // readable here — unlike the twenty-category spending list beside it.
-  const incomeTotals = categoryTotals(projection).filter((total) => total.direction === "INFLOW");
+  const incomeTotals = useMemo(
+    () => categoryTotals(projection).filter((total) => total.direction === "INFLOW"),
+    [projection],
+  );
   const incomeSlices = incomeTotals.map((total) => ({
     key: `${total.direction}-${total.category}`,
     label: total.category,

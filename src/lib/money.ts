@@ -1,3 +1,4 @@
+import { numberFormat } from "@/lib/intl";
 import type { Currency } from "@/types/forecast";
 
 /**
@@ -71,14 +72,6 @@ export function subtractCents(a: number, b: number): number {
   return assertIntegerCents(a) - assertIntegerCents(b);
 }
 
-export function absCents(value: number): number {
-  return Math.abs(assertIntegerCents(value));
-}
-
-export function compareCents(a: number, b: number): number {
-  return assertIntegerCents(a) - assertIntegerCents(b);
-}
-
 /**
  * Which character is the decimal point, and which groups thousands, in a locale.
  *
@@ -86,7 +79,7 @@ export function compareCents(a: number, b: number): number {
  * locale. For nl-NL that is `,` and `.`; for en-US the other way round.
  */
 function localeSeparators(locale?: string): { decimal: string; group: string } {
-  const parts = new Intl.NumberFormat(locale).formatToParts(12_345.6);
+  const parts = numberFormat(`sep|${locale ?? ""}`, locale, {}).formatToParts(12_345.6);
   return {
     decimal: parts.find((part) => part.type === "decimal")?.value ?? ".",
     group: parts.find((part) => part.type === "group")?.value ?? ",",
@@ -282,13 +275,17 @@ export function formatCents(cents: number, currency: Currency, options: FormatOp
   const { locale, signed = false, bare = false } = options;
   const zeroDecimal = isZeroDecimal(currency);
 
-  const formatter = new Intl.NumberFormat(locale, {
-    style: bare ? "decimal" : "currency",
-    currency,
-    minimumFractionDigits: zeroDecimal ? 0 : 2,
-    maximumFractionDigits: zeroDecimal ? 0 : 2,
-    signDisplay: signed ? "exceptZero" : "auto",
-  });
+  const formatter = numberFormat(
+    `cents|${locale ?? ""}|${currency}|${signed}|${bare}`,
+    locale,
+    {
+      style: bare ? "decimal" : "currency",
+      currency,
+      minimumFractionDigits: zeroDecimal ? 0 : 2,
+      maximumFractionDigits: zeroDecimal ? 0 : 2,
+      signDisplay: signed ? "exceptZero" : "auto",
+    },
+  );
 
   return formatter.format(cents / MINOR_UNITS_PER_MAJOR);
 }
@@ -296,7 +293,7 @@ export function formatCents(cents: number, currency: Currency, options: FormatOp
 /** Compact form for chart axes and KPI cards where space is tight. */
 export function formatCentsCompact(cents: number, currency: Currency, locale?: string): string {
   assertIntegerCents(cents);
-  return new Intl.NumberFormat(locale, {
+  return numberFormat(`compact|${locale ?? ""}|${currency}`, locale, {
     style: "currency",
     currency,
     notation: "compact",
@@ -311,7 +308,7 @@ export function formatCentsCompact(cents: number, currency: Currency, locale?: s
  * clearer than the bare code, never to render an empty space.
  */
 export function currencySymbol(currency: Currency, locale?: string): string {
-  const parts = new Intl.NumberFormat(locale, {
+  const parts = numberFormat(`symbol|${locale ?? ""}|${currency}`, locale, {
     style: "currency",
     currency,
     maximumFractionDigits: 0,

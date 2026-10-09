@@ -1,4 +1,5 @@
 import { isTransferCategory } from "@/lib/categories";
+import { roundToCents } from "@/lib/money";
 import type { Account, AccountKind, Forecast, IsoDate, Projection } from "@/types/forecast";
 
 /**
@@ -88,11 +89,14 @@ function applyRate(
     const balance = balances.get(account.id) ?? 0;
     /*
      * Compounded on the closing balance and rounded to whole cents every month,
-     * so the balance never holds a fraction. Note this is a *smooth* average: it
-     * cannot represent a bad early year, which hurts more than the average
-     * implies. Any surface showing growth must say so.
+     * so the balance never holds a fraction. Rounding goes through the money
+     * module rather than `Math.round` so there is one definition of what a whole
+     * cent is.
+     *
+     * Note this is a *smooth* average: it cannot represent a bad early year, which
+     * hurts more than the average implies. Any surface showing growth must say so.
      */
-    const credit = Math.round((balance * bps) / BASIS_POINTS_PER_UNIT / MONTHS_PER_YEAR);
+    const credit = roundToCents((balance * bps) / BASIS_POINTS_PER_UNIT / MONTHS_PER_YEAR);
     balances.set(account.id, balance + credit);
     growth.set(account.id, (growth.get(account.id) ?? 0) + credit);
   }

@@ -27,11 +27,6 @@ export function slugify(value: string): string {
   return slug === "" ? "forecast" : slug;
 }
 
-/** `1234` → `1,234`. Used where a count needs thousands separators. */
-export function formatCount(value: number, locale?: string): string {
-  return new Intl.NumberFormat(locale).format(value);
-}
-
 export function formatPercent(value: number, fractionDigits = 0, locale?: string): string {
   return new Intl.NumberFormat(locale, {
     style: "percent",

@@ -237,7 +237,11 @@ function GoalCard({
   const [targetCents, setTargetCents] = useState(goal?.targetCents ?? 0);
   const [targetDate, setTargetDate] = useState(goal?.targetDate ?? projection.endDate);
 
-  const progress = goal === undefined ? null : goalProgress(projection, goal);
+  // Accumulates across every day in the horizon, so it is not free to repeat.
+  const progress = useMemo(
+    () => (goal === undefined ? null : goalProgress(projection, goal)),
+    [projection, goal],
+  );
 
   const save = (): void => {
     onGoalChange({ label: label.trim(), targetCents, targetDate });

@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+
 import { CategoryLabel } from "@/components/forecast/CategoryLabel";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { splitOutflows, sumCategoryTotals } from "@/lib/categories";
@@ -31,7 +33,8 @@ export function CategoryBreakdown({
   projection: Projection;
   currency: Currency;
 }) {
-  const totals = splitOutflows(categoryTotals(projection)).spending;
+  // Walks every entry in the projection, so it is worth not repeating on each render.
+  const totals = useMemo(() => splitOutflows(categoryTotals(projection)).spending, [projection]);
   const grandTotal = sumCategoryTotals(totals);
   const largest = totals[0]?.totalCents ?? 0;
 

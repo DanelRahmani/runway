@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import { ConfirmDialog } from "@/components/forms/ConfirmDialog";
 import { InvoiceForm } from "@/components/forms/InvoiceForm";
 import { ImpactCell } from "@/components/forecast/ImpactCell";
-import { NoMatches, TableToolbar, type FilterOption } from "@/components/forecast/TableToolbar";import { Badge } from "@/components/ui/badge";
+import { NoMatches, TableToolbar, type FilterOption } from "@/components/forecast/TableToolbar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {

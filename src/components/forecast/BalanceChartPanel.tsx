@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 
 import { BalanceChart, ChartLegend, type BalancePoint } from "@/components/charts/BalanceChart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,11 +31,15 @@ export function BalanceChartPanel({
   height,
   className,
 }: BalanceChartPanelProps) {
-  const chartData: BalancePoint[] = projection.days.map((day) => ({
-    date: day.date,
-    label: day.date,
-    balanceCents: day.closingCents,
-  }));
+  const chartData: BalancePoint[] = useMemo(
+    () =>
+      projection.days.map((day) => ({
+        date: day.date,
+        label: day.date,
+        balanceCents: day.closingCents,
+      })),
+    [projection],
+  );
 
   const { minimumBalanceCents, minimumBalanceDate } = projection.summary;
 

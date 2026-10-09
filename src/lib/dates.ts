@@ -1,3 +1,4 @@
+import { dateFormat } from "@/lib/intl";
 import type { Horizon, IsoDate } from "@/types/forecast";
 
 /**
@@ -205,7 +206,7 @@ export function formatIsoDate(value: IsoDate, locale?: string, withYear = true):
   const monthLabel = MONTH_LABELS[month - 1] ?? "";
   if (!withYear) return `${day} ${monthLabel}`;
   // Assemble manually: `toLocaleDateString` would reintroduce timezone risk.
-  const localised = new Intl.DateTimeFormat(locale, {
+  const localised = dateFormat(`iso|${locale ?? ""}`, locale, {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -220,7 +221,9 @@ export function formatIsoDateRange(start: IsoDate, end: IsoDate, locale?: string
 
 /** `2026-03` → `Mar 2026`. */
 export function formatMonthKey(value: IsoDate, locale?: string): string {
-  return new Intl.DateTimeFormat(locale, { month: "short", year: "numeric", timeZone: "UTC" }).format(
-    parseIsoDate(value),
-  );
+  return dateFormat(`month|${locale ?? ""}`, locale, {
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(parseIsoDate(value));
 }

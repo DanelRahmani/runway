@@ -1,5 +1,5 @@
 import { LineChartIcon } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useState, useMemo, type ReactNode } from "react";
 
 import { BalanceChart, ChartLegend } from "@/components/charts/BalanceChart";
 import { AnimatedMoney } from "@/components/forecast/AnimatedMoney";
@@ -33,11 +33,15 @@ export function GraphDrawer({ projection, currency }: GraphDrawerProps) {
   const [open, setOpen] = useState(false);
   const { summary } = projection;
 
-  const chartData = projection.days.map((day) => ({
-    date: day.date,
-    label: day.date,
-    balanceCents: day.closingCents,
-  }));
+  const chartData = useMemo(
+    () =>
+      projection.days.map((day) => ({
+        date: day.date,
+        label: day.date,
+        balanceCents: day.closingCents,
+      })),
+    [projection],
+  );
 
   const runsOut = summary.cashOutDate !== null;
 
