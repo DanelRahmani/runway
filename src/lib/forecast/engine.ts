@@ -76,6 +76,7 @@ export function buildLedger(forecast: Forecast, startDate: IsoDate, endDate: Iso
     const occurrences = recurringOccurrences(item.startDate, item.frequency, {
       ...range,
       endDate: item.endDate,
+      anchor: item.anchor,
     });
 
     for (const date of occurrences) {

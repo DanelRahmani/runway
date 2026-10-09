@@ -35,6 +35,16 @@ export type Direction = "INFLOW" | "OUTFLOW";
 
 export type Frequency = "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY";
 
+/**
+ * How a monthly-style entry picks its day.
+ *
+ * `DAY` keeps the anchor's day number — the 15th stays the 15th. `MONTH_END`
+ * always lands on the last day of the period, which is how salaries, rent and
+ * most direct debits actually behave. Month lengths differ, so month-end is
+ * recomputed for every period rather than stored once.
+ */
+export type RecurrenceAnchor = "DAY" | "MONTH_END";
+
 export type Horizon = "THIRTEEN_WEEKS" | "SIX_MONTHS" | "TWELVE_MONTHS";
 
 export type InvoiceStatus = "EXPECTED" | "PAID" | "CANCELLED";
@@ -60,6 +70,11 @@ export interface RecurringItem {
   amountCents: number;
   frequency: Frequency;
   startDate: IsoDate;
+  /**
+   * Defaults to `DAY`. Ignored for weekly cadences, which have no month end.
+   * Optional so items saved before this existed keep their anchor day.
+   */
+  anchor?: RecurrenceAnchor;
   endDate?: string;
   category?: string;
   note?: string;

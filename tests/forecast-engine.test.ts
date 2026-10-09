@@ -1086,3 +1086,88 @@ describe("integer-cent arithmetic", () => {
     expect(centsToDecimalString(total, "EUR")).toBe("100.00");
   });
 });
+
+describe("month-end anchoring", () => {
+  const year2026 = { rangeStart: "2026-01-01", rangeEnd: "2026-12-31" };
+
+  it("lands on the last day of each month, whatever its length", () => {
+    const dates = recurringOccurrences("2026-01-31", "MONTHLY", {
+      ...year2026,
+      anchor: "MONTH_END",
+    });
+
+    expect(dates.slice(0, 5)).toEqual([
+      "2026-01-31",
+      "2026-02-28",
+      "2026-03-31",
+      "2026-04-30",
+      "2026-05-31",
+    ]);
+  });
+
+  it("returns to the 31st after a short month instead of sticking at the 28th", () => {
+    // The trap this guards: clamping once and then stepping from the clamped date
+    // would leave every later month on the 28th.
+    const dates = recurringOccurrences("2026-01-31", "MONTHLY", {
+      ...year2026,
+      anchor: "MONTH_END",
+    });
+
+    expect(dates).toContain("2026-03-31");
+    expect(dates).toContain("2026-07-31");
+    expect(dates).toContain("2026-10-31");
+  });
+
+  it("finds 29 February in a leap year", () => {
+    const dates = recurringOccurrences("2028-01-31", "MONTHLY", {
+      rangeStart: "2028-01-01",
+      rangeEnd: "2028-03-31",
+      anchor: "MONTH_END",
+    });
+
+    expect(dates).toEqual(["2028-01-31", "2028-02-29", "2028-03-31"]);
+  });
+
+  it("uses the end of the month it started in, even from mid-month", () => {
+    const dates = recurringOccurrences("2026-01-15", "MONTHLY", {
+      ...year2026,
+      anchor: "MONTH_END",
+    });
+
+    expect(dates.slice(0, 3)).toEqual(["2026-01-31", "2026-02-28", "2026-03-31"]);
+  });
+
+  it("snaps a quarter to the last day of its end month", () => {
+    const dates = recurringOccurrences("2026-01-31", "QUARTERLY", {
+      ...year2026,
+      anchor: "MONTH_END",
+    });
+
+    expect(dates).toEqual(["2026-01-31", "2026-04-30", "2026-07-31", "2026-10-31"]);
+  });
+
+  it("snaps a year to the end of the anchor's month", () => {
+    const dates = recurringOccurrences("2026-01-31", "YEARLY", {
+      rangeStart: "2026-01-01",
+      rangeEnd: "2028-12-31",
+      anchor: "MONTH_END",
+    });
+
+    expect(dates).toEqual(["2026-01-31", "2027-01-31", "2028-01-31"]);
+  });
+
+  it("ignores month-end for weekly cadences rather than erroring", () => {
+    const withAnchor = recurringOccurrences("2026-01-05", "WEEKLY", {
+      ...year2026,
+      anchor: "MONTH_END",
+    });
+
+    expect(withAnchor).toEqual(recurringOccurrences("2026-01-05", "WEEKLY", year2026));
+  });
+
+  it("leaves the default day anchor unchanged", () => {
+    const dates = recurringOccurrences("2026-01-31", "MONTHLY", year2026);
+
+    expect(dates.slice(0, 3)).toEqual(["2026-01-31", "2026-02-28", "2026-03-31"]);
+  });
+});

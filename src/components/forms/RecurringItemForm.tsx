@@ -20,7 +20,14 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { createId } from "@/lib/utils";
 import { validateRecurringItem, type FieldErrors } from "@/lib/validation";
-import type { Currency, ForecastKind, Frequency, IsoDate, RecurringItem } from "@/types/forecast";
+import type {
+  Currency,
+  ForecastKind,
+  Frequency,
+  IsoDate,
+  RecurrenceAnchor,
+  RecurringItem,
+} from "@/types/forecast";
 
 const FREQUENCIES: ReadonlyArray<{ value: Frequency; label: string }> = [
   { value: "WEEKLY", label: "Weekly" },
@@ -67,10 +74,14 @@ export function RecurringItemForm({
         },
   );
   const [frequency, setFrequency] = useState<Frequency>(item?.frequency ?? "MONTHLY");
+  const [anchor, setAnchor] = useState<RecurrenceAnchor>(item?.anchor ?? "DAY");
   const [startDate, setStartDate] = useState<IsoDate>(item?.startDate ?? defaultStartDate);
   const [endDate, setEndDate] = useState<string>(item?.endDate ?? "");
   const [isActive, setIsActive] = useState(item?.isActive ?? true);
   const [errors, setErrors] = useState<FieldErrors>({});
+
+  // Weekly cadences have no month end to snap to, so the choice is not offered.
+  const monthBased = frequency !== "WEEKLY" && frequency !== "BIWEEKLY";
 
   const handleSubmit = (event: React.FormEvent): void => {
     event.preventDefault();
@@ -82,6 +93,9 @@ export function RecurringItemForm({
       amountCents: draft.amountCents,
       frequency,
       startDate,
+      // Only stored when it differs from the default, so an ordinary item keeps a
+      // clean record and old exports stay byte-identical.
+      ...(anchor === "MONTH_END" && monthBased ? { anchor } : {}),
       ...(endDate === "" ? {} : { endDate }),
       ...(draft.category.trim() === "" ? {} : { category: draft.category }),
       ...(draft.note.trim() === "" ? {} : { note: draft.note }),
@@ -157,6 +171,29 @@ export function RecurringItemForm({
               />
             </Field>
           </div>
+
+          {monthBased ? (
+            <Field
+              label="Day of the month"
+              htmlFor="recurring-anchor"
+              error={errors.anchor}
+              hint={
+                anchor === "MONTH_END"
+                  ? "Always the last day of the month. Runway works out how many days each month has, so this lands on 31 Jan, 28 Feb and 31 Mar without drifting."
+                  : "Keeps the day you started on, falling back to the month's last day when it is shorter — the 31st becomes the 28th in February, then returns to the 31st in March."
+              }
+            >
+              <select
+                id="recurring-anchor"
+                value={anchor}
+                onChange={(event) => setAnchor(event.target.value as RecurrenceAnchor)}
+                className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/40 h-9 w-full rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
+              >
+                <option value="DAY">Same day as the start date</option>
+                <option value="MONTH_END">Last day of the month</option>
+              </select>
+            </Field>
+          ) : null}
 
           <div className="flex items-start justify-between gap-4 rounded-md border px-3 py-2.5">
             <Label htmlFor="recurring-active" className="flex-col items-start gap-0.5">

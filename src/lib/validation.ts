@@ -42,6 +42,7 @@ export const currencySchema = z.enum(CURRENCIES);
 export const forecastKindSchema = z.enum(["PERSONAL", "BUSINESS"]);
 export const directionSchema = z.enum(["INFLOW", "OUTFLOW"]);
 export const frequencySchema = z.enum(["WEEKLY", "BIWEEKLY", "MONTHLY", "QUARTERLY", "YEARLY"]);
+export const recurrenceAnchorSchema = z.enum(["DAY", "MONTH_END"]);
 export const horizonSchema = z.enum(["THIRTEEN_WEEKS", "SIX_MONTHS", "TWELVE_MONTHS"]);
 export const invoiceStatusSchema = z.enum(["EXPECTED", "PAID", "CANCELLED"]);
 export const invoiceRecurrenceSchema = z.enum(["NONE", "MONTHLY", "QUARTERLY"]);
@@ -76,6 +77,8 @@ export const recurringItemSchema = z
     amountCents: positiveAmountCentsSchema,
     frequency: frequencySchema,
     startDate: isoDateSchema,
+    // Optional so items saved before month-end anchoring existed still load.
+    anchor: recurrenceAnchorSchema.optional(),
     endDate: isoDateSchema.optional(),
     category: trimmed(40, "Category is too long").optional(),
     note: trimmed(280, "Note is too long").optional(),

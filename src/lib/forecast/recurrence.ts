@@ -1,5 +1,12 @@
-import { addDays, addMonths, compareIsoDate, minIsoDate } from "@/lib/dates";
-import type { Frequency, InvoiceRecurrence, IsoDate } from "@/types/forecast";
+import {
+  addDays,
+  addMonths,
+  compareIsoDate,
+  endOfMonth,
+  minIsoDate,
+  startOfMonth,
+} from "@/lib/dates";
+import type { Frequency, InvoiceRecurrence, IsoDate, RecurrenceAnchor } from "@/types/forecast";
 
 /**
  * Occurrence generation for recurring entries.
@@ -24,10 +31,46 @@ export interface OccurrenceOptions {
   rangeEnd: IsoDate;
   /** Optional end of the recurrence itself, inclusive. */
   endDate?: IsoDate | undefined;
+  /** How a monthly-style item picks its day. Defaults to keeping the anchor day. */
+  anchor?: RecurrenceAnchor | undefined;
+}
+
+/**
+ * The last day of the month `months` after the anchor's month.
+ *
+ * Built out from the *first* of the month rather than by shifting the anchor
+ * date, so `addMonths`' clamping can never interfere — otherwise a 31st would be
+ * carried into February as the 28th and then stay clamped there for every later
+ * period. Recomputing from the month start is what makes this correct across
+ * 28-, 29-, 30- and 31-day months.
+ */
+function monthEndShift(anchor: IsoDate, months: number): IsoDate {
+  return endOfMonth(addMonths(startOfMonth(anchor), months));
 }
 
 /** The anchor date shifted by `count` periods. */
-export function shiftByFrequency(anchor: IsoDate, frequency: Frequency, count: number): IsoDate {
+export function shiftByFrequency(
+  anchor: IsoDate,
+  frequency: Frequency,
+  count: number,
+  anchorMode: RecurrenceAnchor = "DAY",
+): IsoDate {
+  if (anchorMode === "MONTH_END") {
+    switch (frequency) {
+      case "MONTHLY":
+        return monthEndShift(anchor, count);
+      case "QUARTERLY":
+        return monthEndShift(anchor, 3 * count);
+      case "YEARLY":
+        return monthEndShift(anchor, 12 * count);
+      // Weekly cadences have no month end to snap to, so they fall through to
+      // the plain day arithmetic below rather than being an error.
+      case "WEEKLY":
+      case "BIWEEKLY":
+        break;
+    }
+  }
+
   switch (frequency) {
     case "WEEKLY":
       return addDays(anchor, 7 * count);
@@ -54,6 +97,7 @@ export function recurringOccurrences(
   options: OccurrenceOptions,
 ): IsoDate[] {
   const { rangeStart, rangeEnd, endDate } = options;
+  const anchorMode = options.anchor ?? "DAY";
   if (compareIsoDate(anchor, rangeEnd) > 0) return [];
   if (endDate !== undefined && compareIsoDate(endDate, rangeStart) < 0) return [];
 
@@ -61,7 +105,7 @@ export function recurringOccurrences(
 
   const occurrences: IsoDate[] = [];
   for (let count = 0; count < MAX_OCCURRENCES; count += 1) {
-    const date = shiftByFrequency(anchor, frequency, count);
+    const date = shiftByFrequency(anchor, frequency, count, anchorMode);
     if (compareIsoDate(date, hardEnd) > 0) break;
     if (compareIsoDate(date, rangeStart) >= 0) occurrences.push(date);
   }
