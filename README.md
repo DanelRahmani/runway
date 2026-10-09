@@ -61,6 +61,36 @@ the curve, because that is what actually happens to your cash.
 - **Daily / weekly / monthly** toggle for both the chart and the table
 - **Cash-flow table** — opening balance, inflows, outflows, net movement and closing balance per
   period, downloadable as CSV
+- **Donuts** for composition — where income comes from, what you kept, and how the outflow splits
+  between spending, tax and money kept. Capped at six slices and folded to "top 5 + Other"; the
+  legend carries every figure, so colour is never the only signal.
+- **Stacked composition chart** — the same three parts kept apart by week or month. A donut folds
+  every period into one shape, so a tax quarter and a quiet month look identical once summed.
+
+### Savings, accounts and goals
+A dedicated **Savings** tab, which reports *flows* rather than balances:
+
+- **Set aside over the horizon** — total kept, savings rate against income, and average per month
+- **Where the money sits** — add savings, investment, debt or extra cash accounts, each with a
+  starting balance and an optional annual rate. Spendable cash and total wealth are reported
+  separately, because cash is what decides whether you run out.
+- **Assigned transfers are two-sided.** Tag an item as Savings, Investing, Pension or Debt repayment
+  and choose which account it goes into: your spending money drops and your wealth does not, so kept
+  money stops looking spent.
+- **Goal tracking** — name a target with an amount and a date and Runway says whether the plan
+  reaches it, cautiously. A target date beyond the horizon is reported as unknowable rather than
+  optimistically "on track", and reaching the target late is reported as late.
+
+### Currencies
+Twelve: EUR, USD, GBP, CHF, SEK, NOK, DKK, PLN, CZK, CAD, AUD and JPY, each shown with its symbol in
+the picker. Every currency stores 100 minor units so the arithmetic never needs a currency-specific
+branch; JPY is displayed with no decimals, matching how yen is actually used.
+
+### Recurring schedules
+Weekly, fortnightly, monthly, quarterly or yearly. Monthly-style entries can be anchored either to
+their start day or to **the last day of each month**. Month lengths differ, so each date is
+recomputed from the month's start — which is what stops a 31st being clamped to the 28th in February
+and then staying there for the rest of the year.
 
 ### Scenarios
 Duplicate a forecast as a scenario, change one assumption, and compare the two on one chart with a
@@ -68,8 +98,10 @@ Base | Scenario | Difference table. Four preset questions are built in:
 
 - Largest client pays 30 days late
 - Lose a monthly client
-- Hire someone for €1,500 per month
-- Buy a €2,000 laptop next month
+- Hire someone for 1,500 per month
+- Buy a 2,000 laptop next month
+
+The two that name an amount state it in the forecast's own currency.
 
 ### Your data
 - Everything is stored locally in **IndexedDB**
@@ -306,57 +338,66 @@ tests/
 
 ## Design notes
 
-**Visual language.** Runway implements `DESIGN.md` from
-[danelrahmani.com](https://danelrahmani.com): warm editorial minimalism with an atelier thread —
-creme cloth, maroon thread, engraved-label typography.
+**Visual language.** Modern fintech: a cool neutral ground, a vivid rose accent, and depth from
+layered surfaces. It began as an implementation of `DESIGN.md` from
+[danelrahmani.com](https://danelrahmani.com) — warm editorial minimalism, creme cloth and maroon
+thread — and was deliberately moved away from it. **Dark is the default theme**; light and
+"match system" remain real options in the header.
 
 | Token | Light | Dark | Role |
 | --- | --- | --- | --- |
-| `bg` | `#FDFBF6` creme | `#0F090E` aubergine-black | page ground |
-| `ink` | `#1C1917` stone-900 | `#F4EFEA` warm white | primary text |
-| `muted` | `#57534E` stone-600 | `#A8A29E` stone-400 | secondary text |
-| `accent` | `#4A0E0E` maroon | `#D43D55` raspberry | thread, links, seams, emphasis |
-| `accent-hover` | `#6B1515` | `#E8566A` | hover states |
-| `seam` | `rgba(74,14,14,.15)` | `rgba(212,61,85,.18)` | hairline rules |
+| `bg` | `#F7F8FA` cool white | `#07080B` near-black | page ground |
+| `surface` | `#FFFFFF` | `#0D0F14` | cards |
+| `ink` | `#0B0D12` | `#F4F6F9` | primary text |
+| `muted` | `#5B6472` | `#98A1B0` | secondary text |
+| `accent` | `#E11D48` rose | `#FF4D6D` rose | identity, links, emphasis, and the alarm hue |
+| `gain` | `#0D9488` teal | `#2FE0A0` mint | inflows and growth |
 
-Hairlines are tinted toward the accent rather than neutral grey, and shadows are maroon-tinted in
-light mode and raspberry-tinted in dark. Cards are flat — depth is a seam and a background tint,
-never elevation, and never a uniform scale on hover.
+Hairlines are cool and neutral, and the accent carries emphasis instead. Cards take a faint top-light
+gradient and rise 1px on hover, so depth is present without ever being heavy.
 
-**Typography.** Three registers, each with one job:
+**Typography.** Two registers, each with one job:
 
 | Register | Face | Used for |
 | --- | --- | --- |
-| Display | **Bodoni Moda** | page titles, section headings, the wordmark, and hero figures |
-| Body / UI | **Geist Sans** | everything read as prose or used as a control |
+| Display and body | **Geist Sans** | page titles, headings, hero figures, all prose and controls |
 | Label | **Geist Mono** | dates, tags, captions, table figures — capped at 0.8125rem |
 
-Geist Mono is the "woven label" register and is never body copy or a display size, which is why the
-large figures in the KPI cards and the hero use Bodoni instead. All three faces are self-hosted via
-`@fontsource-variable`, so nothing is fetched from a CDN and the app still renders correctly offline.
+A geometric grotesque with tight tracking is what this class of dashboard sets figures in; the
+original Didone read as editorial rather than financial and was removed along with its font files.
+Both remaining faces are self-hosted via `@fontsource-variable`, so nothing is fetched from a CDN and
+the app still renders correctly offline.
 
-**Two deliberate departures from the source palette**, both documented in `src/index.css`:
+**Three decisions worth stating**, all documented in `src/index.css`:
 
-1. **The accent is the alarm hue.** In this palette maroon and raspberry are both the identity thread
-   and the colour of blood, so the accent carries links, seams, the wordmark *and* negative money.
-   Primary buttons therefore stay ink rather than accent, which keeps the solid accent fill reserved
-   for destructive actions and stops a delete button reading as the main call to action.
-2. **A sage green is introduced for gains** (`#3D6B4A` light, `#82B892` dark). The source palette has
-   no "healthy" hue, and without one inflow and outflow would be indistinguishable.
+1. **The accent is one hue doing two jobs** — identity and alarm. Primary buttons stay ink/white and
+the solid accent fill is reserved for destructive actions, so a delete button is the loudest thing on
+screen rather than the easiest to press by accident.
+2. **Text on the bright rose fill is near-black, not white.** White on `#FF4D6D` measures 3.3:1,
+which fails AA for button labels; near-black clears 6.9:1 and reads crisper on a vivid fill anyway.
+In light mode the rose is dark enough that white stays the correct choice.
+3. **The headline gradient deliberately avoids `color-mix`.** It is paired with `text-transparent`,
+so a declaration that failed to parse would leave *invisible text* rather than a plain headline.
+Every other new effect does use `color-mix`, because those degrade to "no effect" rather than
+"no content".
 
-Contrast was checked against WCAG AA at each step: ink on creme is 16.9:1, muted is 7.4:1, maroon on
-creme is 14.9:1. Raspberry `#D43D55` measures 4.3:1 on aubergine-black — just under AA for body text
-— so dark mode uses the lighter `#E8566A` (5.6:1) for text while fills, rings and seams keep the
-specified raspberry.
+**Motion.** Still no springs and no bounce, but there is now a real motion layer, all in CSS:
 
-**Motion.** Low energy — "barely seen, perfectly finished". Transitions are 200ms `ease-out`
-(cubic-bezier 0.22, 1, 0.36, 1), links draw an accent underline from the left, and cards respond with
-a tint and a hairline rather than a transform. There are no springs and no bounce. Every animation has
-a `prefers-reduced-motion` alternative.
+- **`.rise` / `.rise-stagger`** — entrance with an `nth-child` cascade, so a group arrives in
+  sequence without inline styles or a JS timeline. Capped at six, so a long list settles instead of
+  the last row arriving a beat late.
+- **`.lift`** — a 1px rise and a deeper shadow on hover, rather than a uniform scale.
+- **Sliding tab pill** — the active marker is measured off the active trigger and animated on
+  `transform`. A `MutationObserver` catches Radix flipping `data-state` and a `ResizeObserver`
+  catches the row reflowing when a label changes.
+- **Counting KPI figures** — money counts to its new value over 220ms when it changes, animating in
+  whole cents, and deliberately *not* on mount so the first paint is instant.
+- The headline carries a slow travelling gradient; the hero has a dot grid and an accent bloom.
 
-> This is implemented with CSS transitions rather than framer-motion. The brief calls for motion that
-> is barely seen, which CSS covers without shipping a runtime animation library; if entrances or
-> orchestrated sequences are added later, framer-motion is the intended tool.
+All of it is neutralised by the `prefers-reduced-motion` rule in the base layer.
+
+> Deliberately no framer-motion. The motion here is bounded and declarative, which CSS covers
+> without shipping a runtime animation library.
 
 **Theme.** Light, dark and "match system" are selectable from the header. The preference is stored in
 `localStorage` under `runway.theme`, and a small inline script in `index.html` applies it before first
@@ -385,10 +426,17 @@ comparison meaningful.
 - **Single device.** Data lives in the browser. There is no sync and no account — move data between
   devices with JSON export/import.
 - **One currency per forecast.** Multi-currency cash flow would need exchange-rate assumptions.
-- **No live exchange rates.** Scenario presets are euro-denominated and are not converted.
+- **No live exchange rates.** Nothing is converted; a scenario preset names its amount in the
+  forecast's own currency.
 - **Real terms only.** There is no inflation modelling.
-- **No drill-down by category.** `category` is captured on items but only used in the assumptions
-  summary.
+- **One spending account.** Account balances are modelled, but only one account is spendable, so a
+  second current account cannot yet be marked as money you can actually spend from.
+- **Growth is a smooth average.** Rates compound monthly at a flat rate. A real sequence has bad
+  years, and a bad early year hurts more than the average implies — the UI says so wherever growth
+  is shown.
+- **Only assigned transfers move between accounts.** Money kept without naming an account leaves the
+  spending balance and lands nowhere, because Runway will not invent an account it was not told
+  about.
 - **Scenarios are full forecasts.** A scenario is a separate stored forecast linked to its base, not
   a lightweight overlay, so each one costs a row.
 - **Forecasts are recalculated on the client.** Fine up to a few hundred items; a very large forecast
@@ -403,9 +451,10 @@ comparison meaningful.
 
 1. **Sensitivity table** — ending balance and cash-out date across a range of one assumption (for
    example payment delay from 0 to 90 days).
-2. **Category breakdown chart** — where the money actually goes.
-3. **Invoice ageing view** — outstanding receivables bucketed by how overdue they are.
-4. **Recurring item templates** — a library of common freelancer costs.
+2. **Invoice ageing view** — outstanding receivables bucketed by how overdue they are.
+3. **Recurring item templates** — a library of common freelancer costs.
+4. **Multiple spending accounts** — mark several accounts as spendable and measure the cash-out date
+   across all of them.
 5. **Multi-currency forecasts** with explicit rates.
 6. **PDF summary** for sharing a forecast with an accountant.
 7. **Optional end-to-end encryption plus a sync backend**, for people who want their data on more
