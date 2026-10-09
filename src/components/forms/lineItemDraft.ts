@@ -13,6 +13,8 @@ export interface LineItemDraft {
   amountCents: number;
   category: string;
   note: string;
+  /** Which pot a transfer lands in. Empty string means none chosen. */
+  accountId: string;
 }
 
 export const EMPTY_LINE_ITEM_DRAFT: LineItemDraft = {
@@ -21,4 +23,5 @@ export const EMPTY_LINE_ITEM_DRAFT: LineItemDraft = {
   amountCents: 0,
   category: "",
   note: "",
+  accountId: "",
 };

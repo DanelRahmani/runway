@@ -286,6 +286,7 @@ export function RecurringTab({ forecast, projection, update }: RecurringTabProps
           currency={forecast.currency}
           defaultStartDate={forecast.startDate}
           forecastKind={forecast.forecastKind}
+          accounts={forecast.accounts ?? []}
           onSubmit={upsert}
           onClose={() => setEditing(null)}
         />

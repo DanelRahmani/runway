@@ -3,6 +3,7 @@ import { useMemo, useState, type ReactNode } from "react";
 
 import { DonutChart } from "@/components/charts/DonutChart";
 import { StackedCompositionChart } from "@/components/charts/StackedCompositionChart";
+import { AccountsPanel } from "@/components/forecast/AccountsPanel";
 import { AnimatedMoney } from "@/components/forecast/AnimatedMoney";
 import { GranularityToggle } from "@/components/forecast/GranularityToggle";
 import { Field } from "@/components/forms/Field";
@@ -11,15 +12,24 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { formatIsoDate } from "@/lib/dates";
+import { accountProjection } from "@/lib/forecast/accounts";
 import { compositionSeries, goalProgress, savingsSummary } from "@/lib/forecast/savings";
 import { formatCents } from "@/lib/money";
 import { cn, formatPercent } from "@/lib/utils";
-import type { Currency, Forecast, ForecastGoal, Granularity, Projection } from "@/types/forecast";
+import type {
+  Account,
+  Currency,
+  Forecast,
+  ForecastGoal,
+  Granularity,
+  Projection,
+} from "@/types/forecast";
 
 interface SavingsTabProps {
   forecast: Forecast;
   projection: Projection;
   onGoalChange: (goal: ForecastGoal | undefined) => void;
+  onAccountsChange: (accounts: Account[]) => void;
 }
 
 /**
@@ -29,9 +39,15 @@ interface SavingsTabProps {
  * not yet know what was already in savings, because there are no accounts, so the
  * copy is careful to say what moved rather than what is held.
  */
-export function SavingsTab({ forecast, projection, onGoalChange }: SavingsTabProps) {
+export function SavingsTab({
+  forecast,
+  projection,
+  onGoalChange,
+  onAccountsChange,
+}: SavingsTabProps) {
   const currency = forecast.currency;
   const summary = useMemo(() => savingsSummary(projection), [projection]);
+  const balances = useMemo(() => accountProjection(forecast, projection), [forecast, projection]);
   // Monthly by default: the mix moves on a monthly rhythm, and weekly columns
   // make it hard to see that rhythm through the noise.
   const [compositionStep, setCompositionStep] = useState<Granularity>("monthly");
@@ -52,6 +68,13 @@ export function SavingsTab({ forecast, projection, onGoalChange }: SavingsTabPro
 
   return (
     <div className="flex flex-col gap-4">
+      <AccountsPanel
+        forecast={forecast}
+        balances={balances}
+        currency={currency}
+        onAccountsChange={onAccountsChange}
+      />
+
       <Card className={cn(hasKept && "border-positive/30")}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

@@ -306,6 +306,9 @@ export function ForecastPage() {
               forecast={forecast}
               projection={projection}
               onGoalChange={(goal) => update((current) => ({ ...current, goal }))}
+              onAccountsChange={(accounts) =>
+                update((current) => ({ ...current, accounts }))
+              }
             />
           </ErrorBoundary>
         </TabsContent>

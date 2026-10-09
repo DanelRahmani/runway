@@ -21,6 +21,7 @@ import { Switch } from "@/components/ui/switch";
 import { createId } from "@/lib/utils";
 import { validateRecurringItem, type FieldErrors } from "@/lib/validation";
 import type {
+  Account,
   Currency,
   ForecastKind,
   Frequency,
@@ -44,6 +45,8 @@ interface RecurringItemFormProps {
   currency: Currency;
   defaultStartDate: IsoDate;
   forecastKind: ForecastKind | undefined;
+  /** Pots a transfer can be sent to. */
+  accounts: readonly Account[];
   onSubmit: (item: RecurringItem) => void;
 }
 
@@ -60,6 +63,7 @@ export function RecurringItemForm({
   currency,
   defaultStartDate,
   forecastKind,
+  accounts,
   onSubmit,
 }: RecurringItemFormProps) {
   const [draft, setDraft] = useState<LineItemDraft>(() =>
@@ -71,6 +75,7 @@ export function RecurringItemForm({
           amountCents: item.amountCents,
           category: item.category ?? "",
           note: item.note ?? "",
+          accountId: item.accountId ?? "",
         },
   );
   const [frequency, setFrequency] = useState<Frequency>(item?.frequency ?? "MONTHLY");
@@ -98,6 +103,7 @@ export function RecurringItemForm({
       ...(anchor === "MONTH_END" && monthBased ? { anchor } : {}),
       ...(endDate === "" ? {} : { endDate }),
       ...(draft.category.trim() === "" ? {} : { category: draft.category }),
+      ...(draft.accountId === "" ? {} : { accountId: draft.accountId }),
       ...(draft.note.trim() === "" ? {} : { note: draft.note }),
       isActive,
     };
@@ -130,6 +136,7 @@ export function RecurringItemForm({
             errors={errors}
             currency={currency}
             forecastKind={forecastKind}
+            accounts={accounts}
             idPrefix="recurring"
           />
 

@@ -18,7 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { createId } from "@/lib/utils";
 import { validateOneOffItem, type FieldErrors } from "@/lib/validation";
-import type { Currency, ForecastKind, IsoDate, OneOffItem } from "@/types/forecast";
+import type { Account, Currency, ForecastKind, IsoDate, OneOffItem } from "@/types/forecast";
 
 interface OneOffItemFormProps {
   onClose: () => void;
@@ -26,6 +26,8 @@ interface OneOffItemFormProps {
   currency: Currency;
   defaultDate: IsoDate;
   forecastKind: ForecastKind | undefined;
+  /** Pots a transfer can be sent to. */
+  accounts: readonly Account[];
   onSubmit: (item: OneOffItem) => void;
 }
 
@@ -36,6 +38,7 @@ export function OneOffItemForm({
   currency,
   defaultDate,
   forecastKind,
+  accounts,
   onSubmit,
 }: OneOffItemFormProps) {
   const [draft, setDraft] = useState<LineItemDraft>(() =>
@@ -47,6 +50,7 @@ export function OneOffItemForm({
           amountCents: item.amountCents,
           category: item.category ?? "",
           note: item.note ?? "",
+          accountId: item.accountId ?? "",
         },
   );
   const [date, setDate] = useState<IsoDate>(item?.date ?? defaultDate);
@@ -62,6 +66,7 @@ export function OneOffItemForm({
       amountCents: draft.amountCents,
       date,
       ...(draft.category.trim() === "" ? {} : { category: draft.category }),
+      ...(draft.accountId === "" ? {} : { accountId: draft.accountId }),
       ...(draft.note.trim() === "" ? {} : { note: draft.note }),
     });
 
@@ -91,6 +96,7 @@ export function OneOffItemForm({
             errors={errors}
             currency={currency}
             forecastKind={forecastKind}
+            accounts={accounts}
             idPrefix="one-off"
           />
 

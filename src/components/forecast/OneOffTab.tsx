@@ -277,6 +277,7 @@ export function OneOffTab({ forecast, update }: OneOffTabProps) {
           currency={forecast.currency}
           defaultDate={forecast.startDate}
           forecastKind={forecast.forecastKind}
+          accounts={forecast.accounts ?? []}
           onSubmit={upsert}
           onClose={() => setEditing(null)}
         />
