@@ -1,4 +1,4 @@
-import { categoryEmoji } from "@/lib/categories";
+import { categoryEmoji, UNCATEGORISED_LABEL } from "@/lib/categories";
 import { cn } from "@/lib/utils";
 
 /**
@@ -15,7 +15,7 @@ export function CategoryLabel({
   className?: string;
 }) {
   const emoji = categoryEmoji(category);
-  const isUncategorised = category === "Uncategorised";
+  const isUncategorised = category === UNCATEGORISED_LABEL;
 
   return (
     <span className={cn("inline-flex items-center gap-1", className)}>
