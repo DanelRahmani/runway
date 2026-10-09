@@ -7,9 +7,9 @@ export function Card({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card"
       className={cn(
-        // Flat by design: a hairline, no shadow, no nesting. Depth is faked with
-        // a tinted seam rather than elevation.
-        "bg-card text-card-foreground lift hover:border-border-strong flex flex-col rounded-lg border",
+        // A layered surface with a faint top light, plus a 1px lift on hover.
+        // Elevation stays restrained: a hairline and a soft shadow, never a slab.
+        "bg-card text-card-foreground surface lift hover:border-border-strong flex flex-col rounded-xl border",
         className,
       )}
       {...props}
@@ -31,7 +31,7 @@ export function CardTitle({ className, ...props }: React.ComponentProps<"h3">) {
   return (
     <h3
       data-slot="card-title"
-      className={cn("text-sm leading-none font-medium tracking-tight", className)}
+      className={cn("text-sm leading-none font-semibold tracking-tight", className)}
       {...props}
     />
   );

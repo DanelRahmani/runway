@@ -240,14 +240,29 @@ function LandingHero({
   onStarter: (kind: ForecastKind) => void;
 }) {
   return (
-    <section className="flex flex-col gap-6 pt-2 sm:pt-6">
-      <div className="flex max-w-2xl flex-col gap-3">
+    <section className="relative flex flex-col gap-6 pt-2 sm:pt-6">
+      {/*
+       * Hero backdrop. A faint dot grid with an accent bloom, both faded out at
+       * the edges and pushed behind the content, so the headline sits on a lit
+       * surface rather than on flat background.
+       */}
+      <div
+        aria-hidden="true"
+        className="dot-grid pointer-events-none absolute inset-x-[-2rem] -top-10 -z-10 h-[24rem] opacity-70 [mask-image:radial-gradient(62%_58%_at_28%_0%,black,transparent)]"
+      />
+      <div
+        aria-hidden="true"
+        className="glow-accent pointer-events-none absolute -top-28 -left-10 -z-10 h-72 w-[34rem]"
+      />
+
+      <div className="rise-stagger flex max-w-2xl flex-col gap-3">
         <Badge variant="muted" className="w-fit">
           <SparklesIcon />
           Private by design — nothing leaves your browser
         </Badge>
         <h1 className="font-display text-4xl leading-[1.05] tracking-tight text-balance sm:text-6xl">
-          Know when your cash runs out.
+          Know when your{" "}
+          <span className="gradient-pan bg-clip-text text-transparent">cash runs out</span>.
         </h1>
         <p className="text-muted-foreground max-w-[68ch] text-base leading-relaxed sm:text-lg">
           Runway turns your income, expenses and expected invoices into a day-by-day cash-flow
@@ -257,7 +272,7 @@ function LandingHero({
       </div>
 
       {/* Two entry points, because a household and a business are not the same forecast. */}
-      <div className="grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="rise-stagger grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-2">
         <KindStartCard
           kind="PERSONAL"
           onCreate={onCreate}

@@ -4,139 +4,142 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Runway follows DESIGN.md from danelrahmani.com: warm editorial minimalism with
- * an atelier thread — creme cloth, maroon thread, engraved-label typography.
+ * Runway's visual language.
  *
- *   ground     #FDFBF6 creme        / #0F090E aubergine-black
- *   ink        #1C1917 stone-900    / #F4EFEA warm white
- *   muted      #57534E stone-600    / #A8A29E stone-400
- *   accent     #4A0E0E maroon       / #D43D55 raspberry
- *   seam       rgba(74,14,14,.15)   / rgba(212,61,85,.18)
+ *   ground   #F7F8FA cool white   / #07080B near-black
+ *   surface  #FFFFFF              / #0D0F14
+ *   ink      #0B0D12              / #F4F6F9
+ *   accent   #E11D48 rose         / #FF4D6D rose
+ *   gain     #0D9488 teal         / #2FE0A0 mint
  *
- * Two adaptations, both deliberate:
+ * Three decisions worth stating:
  *
- * 1. The accent IS the alarm hue here. In this palette maroon/raspberry is both
- *    the identity thread and the colour of blood, so it carries interactive
- *    emphasis, links, seams, the wordmark and negative money alike. Primary
- *    buttons therefore stay ink rather than accent, which keeps the solid accent
- *    fill reserved for destructive actions and stops a delete button looking
- *    like the main call to action.
+ * 1. Dark is the default presentation. Dashboards of this kind lead with the
+ *    dark surface and figures carry better against it. The switcher still offers
+ *    light and system, and light is a complete theme rather than an afterthought.
  *
- * 2. The palette has no "healthy" hue, so a sage green is introduced for gains.
- *    Without it, inflow and outflow would be indistinguishable.
+ * 2. The accent is one hue doing two jobs — identity and alarm — so primary
+ *    buttons stay ink/white and the solid accent fill is reserved for destructive
+ *    actions. A delete button should be the loudest thing on screen, not the
+ *    thing you are most likely to press by accident.
+ *
+ * 3. Depth comes from layered surfaces and restrained motion rather than flat
+ *    seams: a 1px border, a soft top-light and a 1px hover lift. Elevation is
+ *    present but never heavy.
  */
 
 :root {
-  --radius: 0.375rem;
+  --radius: 0.625rem;
 
-  --background: #fdfbf6;
-  --foreground: #1c1917;
-  --card: #fdfbf6;
-  --card-foreground: #1c1917;
-  --popover: #fffdfa;
-  --popover-foreground: #1c1917;
+  --background: #f7f8fa;
+  --foreground: #0b0d12;
+  --card: #ffffff;
+  --card-foreground: #0b0d12;
+  --popover: #ffffff;
+  --popover-foreground: #0b0d12;
 
-  /* Ink, not accent: see adaptation 1 above. */
-  --primary: #1c1917;
-  --primary-foreground: #f4efea;
+  /* Ink, not accent: see decision 2 above. */
+  --primary: #0b0d12;
+  --primary-foreground: #ffffff;
 
-  --secondary: #f3ede7;
-  --secondary-foreground: #1c1917;
-  --muted: #f3ede7;
-  --muted-foreground: #57534e;
-  --accent: #4a0e0e;
-  --accent-foreground: #fdfbf6;
-  /* The same hue, guaranteed legible as text. Maroon already clears 14:1 here. */
-  --accent-text: #4a0e0e;
-  --accent-hover: #6b1515;
+  --secondary: #eef0f4;
+  --secondary-foreground: #0b0d12;
+  --muted: #f1f3f7;
+  --muted-foreground: #5b6472;
+  --accent: #e11d48;
+  --accent-foreground: #ffffff;
+  /*
+   * The darker step. The rose fill only reaches 4.7:1 on white, which is thin for
+   * small text, so text uses the deeper shade where the fill would not carry.
+   */
+  --accent-text: #be123c;
+  --accent-hover: #be123c;
 
-  --destructive: #4a0e0e;
-  --destructive-foreground: #fdfbf6;
+  --destructive: #e11d48;
+  --destructive-foreground: #ffffff;
 
-  /* Hairlines are tinted toward the accent, never neutral grey. */
-  --border: rgba(74, 14, 14, 0.15);
-  --border-strong: rgba(74, 14, 14, 0.28);
-  --input: rgba(74, 14, 14, 0.28);
-  --ring: #4a0e0e;
+  /* Hairlines are cool and neutral; the accent carries emphasis instead. */
+  --border: rgba(11, 13, 18, 0.1);
+  --border-strong: rgba(11, 13, 18, 0.2);
+  --input: rgba(11, 13, 18, 0.2);
+  --ring: #e11d48;
 
-  --positive: #3d6b4a;
-  --positive-muted: rgba(61, 107, 74, 0.1);
-  --negative: #4a0e0e;
-  --negative-muted: rgba(74, 14, 14, 0.07);
+  --positive: #0d9488;
+  --positive-muted: rgba(13, 148, 136, 0.1);
+  --negative: #e11d48;
+  --negative-muted: rgba(225, 29, 72, 0.08);
 
-  --chart-balance: #1c1917;
-  --chart-scenario: #4a0e0e;
+  --chart-balance: #0b0d12;
+  --chart-scenario: #e11d48;
 
   /*
-   * Categorical scale for the donuts, kept in the same warm register as the rest
-   * of the palette — earth, clay, sage — rather than a rainbow, which would fight
-   * the editorial tone. Six is the practical ceiling: past that the slices stop
-   * being tellable apart. Colour is never the only signal; every slice carries a
-   * label and a percentage in the legend beside it.
+   * Categorical scale for the donuts. Vivid and mutually distinguishable, which
+   * is what a ring needs; six stays the ceiling because past that the wedges stop
+   * being comparable. Colour is never the only signal — every slice carries its
+   * label and share in the legend beside it.
    */
-  --chart-1: #4a0e0e;
-  --chart-2: #3d6b4a;
-  --chart-3: #a8823c;
-  --chart-4: #45606b;
-  --chart-5: #a3563c;
-  --chart-6: #6b4157;
+  --chart-1: #e11d48;
+  --chart-2: #0d9488;
+  --chart-3: #7c3aed;
+  --chart-4: #2563eb;
+  --chart-5: #ea580c;
+  --chart-6: #0891b2;
 
-  /* Maroon-tinted shadows: never neutral grey on creme. */
-  --shadow-tint: rgba(74, 14, 14, 0.08);
-  --shadow-tint-strong: rgba(74, 14, 14, 0.14);
+  --shadow-tint: rgba(11, 13, 18, 0.06);
+  --shadow-tint-strong: rgba(11, 13, 18, 0.12);
 }
 
 .dark {
-  --background: #0f090e;
-  --foreground: #f4efea;
-  --card: #150f14;
-  --card-foreground: #f4efea;
-  --popover: #1a1319;
-  --popover-foreground: #f4efea;
+  --background: #07080b;
+  --foreground: #f4f6f9;
+  --card: #0d0f14;
+  --card-foreground: #f4f6f9;
+  --popover: #14171e;
+  --popover-foreground: #f4f6f9;
 
-  --primary: #f4efea;
-  --primary-foreground: #0f090e;
+  --primary: #f4f6f9;
+  --primary-foreground: #07080b;
 
-  --secondary: #241b22;
-  --secondary-foreground: #f4efea;
-  --muted: #241b22;
-  --muted-foreground: #a8a29e;
-  --accent: #d43d55;
-  --accent-foreground: #0f090e;
+  --secondary: #171b23;
+  --secondary-foreground: #f4f6f9;
+  --muted: #12151c;
+  --muted-foreground: #98a1b0;
+  --accent: #ff4d6d;
   /*
-   * Raspberry #D43D55 measures 4.3:1 on aubergine-black, just under AA for body
-   * text, so text uses the lighter hover step (#E8566A, 5.6:1) while fills,
-   * rings and seams keep the specified raspberry.
+   * Dark text on the bright rose fill. White on #FF4D6D is only 3.3:1, which
+   * fails for button labels, whereas near-black clears 6.9:1 — and reads crisper
+   * against a vivid fill anyway.
    */
-  --accent-text: #e8566a;
-  --accent-hover: #e8566a;
+  --accent-foreground: #0b0d0f;
+  --accent-text: #ff8098;
+  --accent-hover: #ff8098;
 
-  --destructive: #d43d55;
-  --destructive-foreground: #0f090e;
+  --destructive: #ff4d6d;
+  --destructive-foreground: #0b0d0f;
 
-  --border: rgba(212, 61, 85, 0.18);
-  --border-strong: rgba(212, 61, 85, 0.3);
-  --input: rgba(212, 61, 85, 0.3);
-  --ring: #d43d55;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --input: rgba(255, 255, 255, 0.16);
+  --ring: #ff4d6d;
 
-  --positive: #82b892;
-  --positive-muted: rgba(130, 184, 146, 0.14);
-  --negative: #e8566a;
-  --negative-muted: rgba(212, 61, 85, 0.14);
+  --positive: #2fe0a0;
+  --positive-muted: rgba(47, 224, 160, 0.12);
+  --negative: #ff5d7d;
+  --negative-muted: rgba(255, 93, 125, 0.12);
 
-  --chart-balance: #f4efea;
-  --chart-scenario: #d43d55;
+  --chart-balance: #f4f6f9;
+  --chart-scenario: #ff4d6d;
 
-  /* Lifted for the aubergine ground; same order as light, so a slice keeps its identity. */
-  --chart-1: #d43d55;
-  --chart-2: #82b892;
-  --chart-3: #d9b26a;
-  --chart-4: #8fb0bd;
-  --chart-5: #d98f6a;
-  --chart-6: #b98aa8;
+  /* Same order as light, so a slice keeps its identity when the theme flips. */
+  --chart-1: #ff4d6d;
+  --chart-2: #2fe0a0;
+  --chart-3: #a78bfa;
+  --chart-4: #60a5fa;
+  --chart-5: #fb923c;
+  --chart-6: #22d3ee;
 
-  --shadow-tint: rgba(212, 61, 85, 0.1);
-  --shadow-tint-strong: rgba(212, 61, 85, 0.16);
+  --shadow-tint: rgba(0, 0, 0, 0.4);
+  --shadow-tint-strong: rgba(0, 0, 0, 0.6);
 }
 
 @theme inline {
@@ -182,7 +185,8 @@
   --color-chart-6: var(--chart-6);
 
   --font-display:
-    "Bodoni Moda Variable", "Bodoni Moda", Didot, "Times New Roman", Georgia, serif;
+    "Geist Variable", "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
   --font-sans:
     "Geist Variable", "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
@@ -209,13 +213,14 @@
   }
 
   /*
-   * The display face. Didones are already tightly fitted, so letter-spacing
-   * never goes below -0.02em, and headings balance their lines.
+   * The display face. A geometric grotesque with tight tracking is what the rest
+   * of the field sets figures and headings in; the old Didone read as editorial
+   * rather than financial.
    */
   .font-display {
     font-family: var(--font-display);
-    font-weight: 500;
-    letter-spacing: -0.02em;
+    font-weight: 600;
+    letter-spacing: -0.032em;
     text-wrap: balance;
   }
 
@@ -279,12 +284,144 @@
     border-top: 1px solid var(--border);
   }
 
-  /* Low-energy motion: barely seen, perfectly finished. */
+  /* Hover lift: a 1px rise and a deeper shadow, never a heavy one. */
   .lift {
     transition:
       background-color 200ms cubic-bezier(0.22, 1, 0.36, 1),
       border-color 200ms cubic-bezier(0.22, 1, 0.36, 1),
-      box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1);
+      box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .lift:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 28px -14px var(--shadow-tint-strong);
+  }
+
+  /*
+   * Entrance animation.
+   *
+   * `--rise-delay` staggers a group without a JS timeline: set it per item and the
+   * sequence reads as orchestrated rather than simultaneous. The curve decelerates
+   * into place so the page settles instead of performing, and the reduced-motion
+   * rule in the base layer neutralises every bit of it.
+   */
+  .rise {
+    animation: runway-rise 460ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--rise-delay, 0ms);
+  }
+
+  /*
+   * Layered surface: a barely-there light from above, so a card reads as a
+   * surface rather than as a filled rectangle.
+   */
+  .surface {
+    background-image: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--foreground) 4%, transparent),
+      transparent 42%
+    );
+  }
+
+  /* Accent bloom, for the one figure that matters most on a screen. */
+  .glow-accent {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .glow-accent::before {
+    content: "";
+    position: absolute;
+    inset: -60% -25%;
+    z-index: -1;
+    background: radial-gradient(
+      45% 50% at 50% 42%,
+      color-mix(in srgb, var(--accent) 42%, transparent),
+      transparent 72%
+    );
+    filter: blur(30px);
+    opacity: 0.45;
+    pointer-events: none;
+  }
+
+  /*
+   * Slow travelling gradient, for the headline.
+   *
+   * Deliberately avoids `color-mix`: this one is paired with `text-transparent`,
+   * and a gradient that fails to parse would leave invisible text rather than a
+   * plain one. Both stops already exist as custom properties.
+   */
+  .gradient-pan {
+    background-image: linear-gradient(
+      100deg,
+      var(--accent) 0%,
+      var(--foreground) 50%,
+      var(--accent) 100%
+    );
+    background-size: 250% 100%;
+    animation: runway-pan 7s linear infinite;
+  }
+
+  /* Faint dot grid, for hero backdrops. */
+  .dot-grid {
+    background-image: radial-gradient(
+      color-mix(in srgb, var(--foreground) 14%, transparent) 1px,
+      transparent 1px
+    );
+    background-size: 22px 22px;
+  }
+
+  @keyframes runway-rise {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes runway-pan {
+    from {
+      background-position: 0% 50%;
+    }
+    to {
+      background-position: -250% 50%;
+    }
+  }
+
+  /*
+   * Cascade a group in without per-item markup or inline styles: every direct
+   * child takes the same entrance, offset by its position. Capped at six so a
+   * long list settles quickly instead of the last row arriving a beat late.
+   */
+  .rise-stagger > * {
+    animation: runway-rise 460ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .rise-stagger > *:nth-child(1) {
+    animation-delay: 0ms;
+  }
+
+  .rise-stagger > *:nth-child(2) {
+    animation-delay: 60ms;
+  }
+
+  .rise-stagger > *:nth-child(3) {
+    animation-delay: 120ms;
+  }
+
+  .rise-stagger > *:nth-child(4) {
+    animation-delay: 180ms;
+  }
+
+  .rise-stagger > *:nth-child(5) {
+    animation-delay: 240ms;
+  }
+
+  .rise-stagger > *:nth-child(6) {
+    animation-delay: 300ms;
   }
 
   /* Link underline that draws in from the left in the accent hue. */

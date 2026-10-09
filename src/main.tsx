@@ -5,7 +5,6 @@ import { BrowserRouter } from "react-router-dom";
 // Self-hosted so the app still renders correctly offline.
 import "@fontsource-variable/geist";
 import "@fontsource-variable/geist-mono";
-import "@fontsource-variable/bodoni-moda";
 
 import { App } from "@/App";
 import { ErrorBoundary } from "@/components/layout/ErrorBoundary";

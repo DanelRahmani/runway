@@ -31,7 +31,12 @@ export function readStoredTheme(): Theme {
   } catch {
     // localStorage can be blocked entirely; fall through to the default.
   }
-  return "system";
+  /*
+   * Dark, not "system", because dark is how this dashboard is meant to be seen
+   * and figures carry better against it. "system" is still a real choice in the
+   * switcher — it is just no longer what a visitor gets by default.
+   */
+  return "dark";
 }
 
 export function systemPrefersDark(): boolean {
