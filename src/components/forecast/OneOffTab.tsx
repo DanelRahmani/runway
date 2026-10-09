@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 
 import { ConfirmDialog } from "@/components/forms/ConfirmDialog";
 import { OneOffItemForm } from "@/components/forms/OneOffItemForm";
+import { BulkBar, SelectionCheckbox } from "@/components/forecast/BulkBar";
 import { CategoryLabel } from "@/components/forecast/CategoryLabel";
 import { NoMatches, TableToolbar } from "@/components/forecast/TableToolbar";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,7 @@ import {
   TableRow,
   TableWrapper,
 } from "@/components/ui/table";
+import { useSelection, withoutCategory } from "@/hooks/useSelection";
 import { compareIsoDate, formatIsoDate, horizonEndDate } from "@/lib/dates";
 import {
   ALL_FILTER,
@@ -57,6 +59,10 @@ export function OneOffTab({ forecast, update }: OneOffTabProps) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState(ALL_FILTER);
   const [sort, setSort] = useState("date-asc");
+  const [pendingBulkDelete, setPendingBulkDelete] = useState(false);
+
+  const itemIds = useMemo(() => forecast.oneOffItems.map((item) => item.id), [forecast.oneOffItems]);
+  const selection = useSelection(itemIds);
 
   const categories = useMemo(() => distinctCategories(forecast.oneOffItems), [forecast.oneOffItems]);
   const horizonEnd = horizonEndDate(forecast.startDate, forecast.horizon);
@@ -105,6 +111,49 @@ export function OneOffTab({ forecast, update }: OneOffTabProps) {
   const clearFilters = (): void => {
     setQuery("");
     setCategory(ALL_FILTER);
+  };
+
+  /** Applies one category to everything selected, in a single write. */
+  const applyCategory = (next: string | undefined): void => {
+    const targets = selection.ids;
+    if (targets.size === 0) return;
+
+    update((current) => ({
+      ...current,
+      oneOffItems: current.oneOffItems.map((item) => {
+        if (!targets.has(item.id)) return item;
+        return next === undefined ? withoutCategory(item) : { ...item, category: next };
+      }),
+    }));
+    selection.clear();
+  };
+
+  /** Deletes the whole selection, then offers one undo for all of it. */
+  const removeSelected = (): void => {
+    const targets = selection.ids;
+    if (targets.size === 0) return;
+
+    // Captured with their positions so undo can put the list back as it was.
+    const removed = forecast.oneOffItems
+      .map((item, index) => ({ item, index }))
+      .filter((entry) => targets.has(entry.item.id));
+
+    update((current) => ({
+      ...current,
+      oneOffItems: current.oneOffItems.filter((item) => !targets.has(item.id)),
+    }));
+    selection.clear();
+
+    showUndoToast(`Deleted ${removed.length} item${removed.length === 1 ? "" : "s"}.`, () => {
+      update((current) => {
+        const next = [...current.oneOffItems];
+        for (const { item, index } of removed) {
+          if (next.some((candidate) => candidate.id === item.id)) continue;
+          next.splice(Math.min(index, next.length), 0, item);
+        }
+        return { ...current, oneOffItems: next };
+      });
+    });
   };
 
   const totals = forecast.oneOffItems.reduce(
@@ -165,6 +214,17 @@ export function OneOffTab({ forecast, update }: OneOffTabProps) {
               </Button>
             </div>
 
+            {selection.count > 0 ? (
+              <BulkBar
+                count={selection.count}
+                existing={categories}
+                forecastKind={forecast.forecastKind}
+                onApplyCategory={applyCategory}
+                onDelete={() => setPendingBulkDelete(true)}
+                onClear={selection.clear}
+              />
+            ) : null}
+
             {visible.length === 0 ? (
               <NoMatches scope="one-off items" onClear={clearFilters} />
             ) : (
@@ -173,6 +233,22 @@ export function OneOffTab({ forecast, update }: OneOffTabProps) {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-8">
+                          <SelectionCheckbox
+                            checked={
+                              visible.length > 0 &&
+                              visible.every((item) => selection.isSelected(item.id))
+                            }
+                            indeterminate={visible.some((item) => selection.isSelected(item.id))}
+                            onChange={(checked) =>
+                              selection.setMany(
+                                visible.map((item) => item.id),
+                                checked,
+                              )
+                            }
+                            label="Select all visible items"
+                          />
+                        </TableHead>
                         <TableHead>Item</TableHead>
                         <TableHead>Direction</TableHead>
                         <TableHead>Date</TableHead>
@@ -188,6 +264,13 @@ export function OneOffTab({ forecast, update }: OneOffTabProps) {
                           compareIsoDate(item.date, horizonEnd) > 0;
                         return (
                           <TableRow key={item.id}>
+                            <TableCell>
+                              <SelectionCheckbox
+                                checked={selection.isSelected(item.id)}
+                                onChange={(checked) => selection.toggle(item.id, checked)}
+                                label={`Select ${item.name}`}
+                              />
+                            </TableCell>
                             <TableCell>
                               <span className="font-medium">{item.name}</span>
                               {item.category !== undefined ? (
@@ -282,6 +365,15 @@ export function OneOffTab({ forecast, update }: OneOffTabProps) {
           onClose={() => setEditing(null)}
         />
       ) : null}
+
+      <ConfirmDialog
+        open={pendingBulkDelete}
+        onOpenChange={(open) => (open ? undefined : setPendingBulkDelete(false))}
+        title={`Delete ${selection.count} item${selection.count === 1 ? "" : "s"}?`}
+        description="They are removed from this forecast. You can undo straight after."
+        confirmLabel="Delete"
+        onConfirm={removeSelected}
+      />
 
       <ConfirmDialog
         open={pendingDelete !== null}

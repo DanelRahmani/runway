@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 
 import { ConfirmDialog } from "@/components/forms/ConfirmDialog";
 import { RecurringItemForm } from "@/components/forms/RecurringItemForm";
+import { BulkBar, SelectionCheckbox } from "@/components/forecast/BulkBar";
 import { CategoryLabel } from "@/components/forecast/CategoryLabel";
 import { ImpactCell } from "@/components/forecast/ImpactCell";
 import { NoMatches, TableToolbar } from "@/components/forecast/TableToolbar";
@@ -19,6 +20,7 @@ import {
   TableRow,
   TableWrapper,
 } from "@/components/ui/table";
+import { useSelection, withoutCategory } from "@/hooks/useSelection";
 import { formatIsoDate } from "@/lib/dates";
 import { impactFor, itemImpact } from "@/lib/forecast/engine";
 import {
@@ -69,6 +71,13 @@ export function RecurringTab({ forecast, projection, update }: RecurringTabProps
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState(ALL_FILTER);
   const [sort, setSort] = useState("amount-desc");
+  const [pendingBulkDelete, setPendingBulkDelete] = useState(false);
+
+  const itemIds = useMemo(
+    () => forecast.recurringItems.map((item) => item.id),
+    [forecast.recurringItems],
+  );
+  const selection = useSelection(itemIds);
 
   const impacts = useMemo(() => itemImpact(projection), [projection]);
   const categories = useMemo(
@@ -130,6 +139,49 @@ export function RecurringTab({ forecast, projection, update }: RecurringTabProps
     setCategory(ALL_FILTER);
   };
 
+  /** Applies one category to everything selected, in a single write. */
+  const applyCategory = (next: string | undefined): void => {
+    const targets = selection.ids;
+    if (targets.size === 0) return;
+
+    update((current) => ({
+      ...current,
+      recurringItems: current.recurringItems.map((item) => {
+        if (!targets.has(item.id)) return item;
+        return next === undefined ? withoutCategory(item) : { ...item, category: next };
+      }),
+    }));
+    selection.clear();
+  };
+
+  /** Deletes the whole selection, then offers one undo for all of it. */
+  const removeSelected = (): void => {
+    const targets = selection.ids;
+    if (targets.size === 0) return;
+
+    // Captured with their positions so undo can put the list back as it was.
+    const removed = forecast.recurringItems
+      .map((item, index) => ({ item, index }))
+      .filter((entry) => targets.has(entry.item.id));
+
+    update((current) => ({
+      ...current,
+      recurringItems: current.recurringItems.filter((item) => !targets.has(item.id)),
+    }));
+    selection.clear();
+
+    showUndoToast(`Deleted ${removed.length} item${removed.length === 1 ? "" : "s"}.`, () => {
+      update((current) => {
+        const next = [...current.recurringItems];
+        for (const { item, index } of removed) {
+          if (next.some((candidate) => candidate.id === item.id)) continue;
+          next.splice(Math.min(index, next.length), 0, item);
+        }
+        return { ...current, recurringItems: next };
+      });
+    });
+  };
+
   const incomeTotal = forecast.recurringItems
     .filter((item) => item.isActive && item.direction === "INFLOW")
     .reduce((total, item) => total + item.amountCents, 0);
@@ -175,6 +227,17 @@ export function RecurringTab({ forecast, projection, update }: RecurringTabProps
               </Button>
             </div>
 
+            {selection.count > 0 ? (
+              <BulkBar
+                count={selection.count}
+                existing={categories}
+                forecastKind={forecast.forecastKind}
+                onApplyCategory={applyCategory}
+                onDelete={() => setPendingBulkDelete(true)}
+                onClear={selection.clear}
+              />
+            ) : null}
+
             {visible.length === 0 ? (
               <NoMatches scope="recurring items" onClear={clearFilters} />
             ) : (
@@ -182,6 +245,22 @@ export function RecurringTab({ forecast, projection, update }: RecurringTabProps
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-8">
+                        <SelectionCheckbox
+                          checked={
+                            visible.length > 0 &&
+                            visible.every((item) => selection.isSelected(item.id))
+                          }
+                          indeterminate={visible.some((item) => selection.isSelected(item.id))}
+                          onChange={(checked) =>
+                            selection.setMany(
+                              visible.map((item) => item.id),
+                              checked,
+                            )
+                          }
+                          label="Select all visible items"
+                        />
+                      </TableHead>
                       <TableHead>Item</TableHead>
                       <TableHead>Direction</TableHead>
                       <TableHead>Frequency</TableHead>
@@ -200,6 +279,13 @@ export function RecurringTab({ forecast, projection, update }: RecurringTabProps
                           key={item.id}
                           className={item.isActive ? undefined : "opacity-55"}
                         >
+                          <TableCell>
+                            <SelectionCheckbox
+                              checked={selection.isSelected(item.id)}
+                              onChange={(checked) => selection.toggle(item.id, checked)}
+                              label={`Select ${item.name}`}
+                            />
+                          </TableCell>
                           <TableCell>
                             <span className="font-medium">{item.name}</span>
                             {item.category !== undefined ? (
@@ -292,6 +378,15 @@ export function RecurringTab({ forecast, projection, update }: RecurringTabProps
           onClose={() => setEditing(null)}
         />
       ) : null}
+
+      <ConfirmDialog
+        open={pendingBulkDelete}
+        onOpenChange={(open) => (open ? undefined : setPendingBulkDelete(false))}
+        title={`Delete ${selection.count} item${selection.count === 1 ? "" : "s"}?`}
+        description="They are removed from this forecast. You can undo straight after."
+        confirmLabel="Delete"
+        onConfirm={removeSelected}
+      />
 
       <ConfirmDialog
         open={pendingDelete !== null}
