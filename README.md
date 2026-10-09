@@ -84,9 +84,15 @@ clears the selection, matching how Escape closes a dialog.
 A dedicated **Savings** tab, which reports *flows* rather than balances:
 
 - **Set aside over the horizon** — total kept, savings rate against income, and average per month
-- **Where the money sits** — add savings, investment, debt or extra cash accounts, each with a
-  starting balance and an optional annual rate. Spendable cash and total wealth are reported
-  separately, because cash is what decides whether you run out.
+- **Toeslagen, benefits, studiefinanciering and subsidies are income categories**, not discounts on
+  the bill they cover. That is what happens to the bank account, and it keeps the savings rate honest:
+  netting huurtoeslag off the rent would flatter the spending figures instead of showing income
+  beside them. Dutch names are used where there is no unambiguous English one.
+- **Where the money sits** — add, edit and remove savings, investment, debt or extra cash accounts,
+  each with a starting balance and an optional annual rate. Editing reuses the add form rather than
+  opening a second one, and keeps the account's id so transfers already pointing at it still do.
+  Spendable cash and total wealth are reported separately, because cash is what decides whether you
+  run out.
 - **Assigned transfers are two-sided.** Tag an item as Savings, Investing, Pension or Debt repayment
   and choose which account it goes into: your spending money drops and your wealth does not, so kept
   money stops looking spent.

@@ -1,4 +1,4 @@
-import { CoinsIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { CoinsIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 
 import { AnimatedMoney } from "@/components/forecast/AnimatedMoney";
@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { accountKindLabel, SPENDING_ACCOUNT_ID, type AccountProjection } from "@/lib/forecast/accounts";
 import { formatCents } from "@/lib/money";
-import { createId } from "@/lib/utils";
+import { cn, createId } from "@/lib/utils";
 import type { Account, AccountKind, Currency, Forecast } from "@/types/forecast";
 
 const KINDS: readonly AccountKind[] = ["SAVINGS", "INVESTMENT", "DEBT", "CASH"];
@@ -39,7 +39,9 @@ export function AccountsPanel({
   onAccountsChange,
 }: AccountsPanelProps) {
   const accounts = useMemo(() => forecast.accounts ?? [], [forecast.accounts]);
-  const [adding, setAdding] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  /** The account the form is editing, or `null` while it is adding a new one. */
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [kind, setKind] = useState<AccountKind>("SAVINGS");
   const [startingCents, setStartingCents] = useState(0);
@@ -52,21 +54,44 @@ export function AccountsPanel({
   const rateValid = Number.isFinite(parsedRate) && parsedRate >= -20 && parsedRate <= 20;
   const canSave = name.trim() !== "" && rateValid;
 
+  /**
+   * Opens the one form for both jobs. Editing loads the current values in, which is
+   * why there is no separate edit dialog: one form cannot drift from the other.
+   */
+  const openForm = (account?: Account): void => {
+    setEditingId(account?.id ?? null);
+    setName(account?.name ?? "");
+    setKind(account?.kind ?? "SAVINGS");
+    setStartingCents(account?.startingBalanceCents ?? 0);
+    setRatePercent(
+      account?.annualRateBps === undefined ? "0" : String(account.annualRateBps / BPS_PER_PERCENT),
+    );
+    setFormOpen(true);
+  };
+
+  const closeForm = (): void => {
+    setFormOpen(false);
+    setEditingId(null);
+  };
+
   const save = (): void => {
     const rateBps = Math.round(parsedRate * BPS_PER_PERCENT);
     const account: Account = {
-      id: createId(),
+      // An edit keeps its id, so transfers already pointing at this account still do.
+      id: editingId ?? createId(),
       name: name.trim(),
       kind,
       startingBalanceCents: startingCents,
       ...(rateBps === 0 ? {} : { annualRateBps: rateBps }),
     };
-    onAccountsChange([...accounts, account]);
-    setName("");
-    setKind("SAVINGS");
-    setStartingCents(0);
-    setRatePercent("0");
-    setAdding(false);
+
+    onAccountsChange(
+      editingId === null
+        ? [...accounts, account]
+        : accounts.map((existing) => (existing.id === editingId ? account : existing)),
+    );
+    // `openForm` writes every field before the form is shown, so no draft lingers.
+    closeForm();
   };
 
   return (
@@ -82,8 +107,8 @@ export function AccountsPanel({
             are different questions, so they are reported apart.
           </CardDescription>
         </div>
-        {!adding ? (
-          <Button variant="outline" size="sm" onClick={() => setAdding(true)}>
+        {!formOpen ? (
+          <Button variant="outline" size="sm" onClick={() => openForm()}>
             <PlusIcon />
             Add account
           </Button>
@@ -122,12 +147,14 @@ export function AccountsPanel({
               closingCents={entry.closingCents}
               growthCents={entry.growthCents}
               currency={currency}
+              editing={editingId === entry.account.id}
+              onEdit={() => openForm(entry.account)}
               onRemove={() =>
                 onAccountsChange(accounts.filter((account) => account.id !== entry.account.id))
               }
             />
           ))}
-          {pots.length === 0 && !adding ? (
+          {pots.length === 0 && !formOpen ? (
             <li className="text-muted-foreground rounded-lg border border-dashed p-4 text-xs leading-relaxed">
               No accounts yet, so everything you keep simply leaves the spending balance. Add a
               savings or investment account and transfers into it become two-sided: your spending
@@ -136,7 +163,7 @@ export function AccountsPanel({
           ) : null}
         </ul>
 
-        {adding ? (
+        {formOpen ? (
           <form
             className="flex flex-col gap-3 rounded-lg border p-4"
             onSubmit={(event) => {
@@ -144,6 +171,9 @@ export function AccountsPanel({
               if (canSave) save();
             }}
           >
+            <p className="text-sm font-medium">
+              {editingId === null ? "New account" : "Edit account"}
+            </p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Name" htmlFor="account-name" required>
                 <Input
@@ -192,9 +222,9 @@ export function AccountsPanel({
             </div>
             <div className="flex flex-wrap gap-2">
               <Button type="submit" size="sm" disabled={!canSave}>
-                Add account
+                {editingId === null ? "Add account" : "Save changes"}
               </Button>
-              <Button type="button" variant="ghost" size="sm" onClick={() => setAdding(false)}>
+              <Button type="button" variant="ghost" size="sm" onClick={closeForm}>
                 Cancel
               </Button>
             </div>
@@ -220,6 +250,8 @@ function AccountRow({
   growthCents,
   currency,
   derived = false,
+  editing = false,
+  onEdit,
   onRemove,
 }: {
   name: string;
@@ -227,12 +259,20 @@ function AccountRow({
   closingCents: number;
   growthCents: number;
   currency: Currency;
-  /** The spending account is derived from the forecast and cannot be removed. */
+  /** The spending account is derived from the forecast and cannot be changed. */
   derived?: boolean;
+  /** Highlighted while this row is the one loaded into the form. */
+  editing?: boolean;
+  onEdit?: () => void;
   onRemove?: () => void;
 }) {
   return (
-    <li className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
+    <li
+      className={cn(
+        "flex items-center justify-between gap-3 rounded-lg border px-3 py-2",
+        editing && "border-ring bg-muted/40",
+      )}
+    >
       <span className="flex min-w-0 items-center gap-2">
         <span className="truncate text-sm font-medium">{name}</span>
         <span className="text-muted-foreground font-mono text-[0.625rem] tracking-wide uppercase">
@@ -249,16 +289,31 @@ function AccountRow({
           </span>
         ) : null}
         <span className="tnum text-sm font-medium">{formatCents(closingCents, currency)}</span>
-        {!derived && onRemove !== undefined ? (
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="text-muted-foreground hover:text-destructive"
-            aria-label={`Remove ${name}`}
-            onClick={onRemove}
-          >
-            <Trash2Icon className="size-3.5" />
-          </Button>
+        {!derived ? (
+          <span className="flex items-center">
+            {onEdit !== undefined ? (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="text-muted-foreground hover:text-foreground"
+                aria-label={`Edit ${name}`}
+                onClick={onEdit}
+              >
+                <PencilIcon className="size-3.5" />
+              </Button>
+            ) : null}
+            {onRemove !== undefined ? (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="text-muted-foreground hover:text-destructive"
+                aria-label={`Remove ${name}`}
+                onClick={onRemove}
+              >
+                <Trash2Icon className="size-3.5" />
+              </Button>
+            ) : null}
+          </span>
         ) : null}
       </span>
     </li>
