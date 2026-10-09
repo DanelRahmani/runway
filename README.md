@@ -2,7 +2,7 @@
 
 **Know when your cash runs out.**
 
-Runway is a private, offline-first cash-flow and runway forecaster for freelancers, students and
+Runway is a private, browser-local cash-flow and runway forecaster for freelancers, students and
 small-business owners. Set a starting balance, add what actually moves money in and out, and see a
 day-by-day projection of your balance — including the date it goes negative, and what happens when
 one assumption changes.
@@ -66,6 +66,13 @@ the curve, because that is what actually happens to your cash.
   legend carries every figure, so colour is never the only signal.
 - **Stacked composition chart** — the same three parts kept apart by week or month. A donut folds
   every period into one shape, so a tax quarter and a quiet month look identical once summed.
+
+### Editing in bulk
+Every item table has a checkbox column. Tick rows and a bar appears that applies one category to the
+whole selection, or deletes it after a single confirmation — with one undo for the entire set.
+
+The select-all box shows a partial state when only some rows are ticked. Selection deliberately
+survives filtering, so the count keeps telling the truth about what a bulk change will touch.
 
 ### Savings, accounts and goals
 A dedicated **Savings** tab, which reports *flows* rather than balances:
@@ -365,8 +372,9 @@ gradient and rise 1px on hover, so depth is present without ever being heavy.
 
 A geometric grotesque with tight tracking is what this class of dashboard sets figures in; the
 original Didone read as editorial rather than financial and was removed along with its font files.
-Both remaining faces are self-hosted via `@fontsource-variable`, so nothing is fetched from a CDN and
-the app still renders correctly offline.
+Both remaining faces are self-hosted via `@fontsource-variable`, so no font is fetched from a CDN.
+That is a privacy and performance choice, not an offline guarantee — see the service worker note
+under limitations.
 
 **Three decisions worth stating**, all documented in `src/index.css`:
 
@@ -437,6 +445,10 @@ comparison meaningful.
 - **Only assigned transfers move between accounts.** Money kept without naming an account leaves the
   spending balance and lands nowhere, because Runway will not invent an account it was not told
   about.
+- **No service worker, so no true offline mode.** The page loads from the network and the browser's
+  ordinary HTTP cache; the app owns no cache of its own. Close the tab with no connection and it may
+  not reopen. A `vite-plugin-pwa` service worker is the upgrade path, and it needs PNG maskable
+  icons alongside the existing SVG favicon.
 - **Scenarios are full forecasts.** A scenario is a separate stored forecast linked to its base, not
   a lightweight overlay, so each one costs a row.
 - **Forecasts are recalculated on the client.** Fine up to a few hundred items; a very large forecast
@@ -455,7 +467,9 @@ comparison meaningful.
 3. **Recurring item templates** — a library of common freelancer costs.
 4. **Multiple spending accounts** — mark several accounts as spendable and measure the cash-out date
    across all of them.
-5. **Multi-currency forecasts** with explicit rates.
+5. **Offline install as a PWA** — a service worker so the app opens with no connection, which the
+   copy currently promises but the code does not yet deliver.
+6. **Multi-currency forecasts** with explicit rates.
 6. **PDF summary** for sharing a forecast with an accountant.
 7. **Optional end-to-end encryption plus a sync backend**, for people who want their data on more
    than one device.
