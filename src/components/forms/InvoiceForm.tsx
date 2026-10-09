@@ -132,10 +132,15 @@ export function InvoiceForm({
                 type="number"
                 inputMode="numeric"
                 min={0}
-                step={1}
+                /* `any` so the browser never refuses a typed decimal; it rounds instead. */
+                step="any"
                 value={paymentDelayDays}
-                className="tnum text-right"
+                className="tabular-nums text-right"
                 onChange={(event) => setPaymentDelayDays(event.target.value)}
+                onBlur={() => {
+                  const parsed = Number.parseFloat(paymentDelayDays);
+                  if (Number.isFinite(parsed)) setPaymentDelayDays(String(Math.round(parsed)));
+                }}
               />
             </Field>
           </div>

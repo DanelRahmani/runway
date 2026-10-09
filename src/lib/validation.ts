@@ -19,6 +19,19 @@ import type {
 /** Upper bound on a single amount: 1 trillion major units, well inside safe-integer range. */
 const MAX_AMOUNT_CENTS = 1_000_000_000_000 * MINOR_UNITS_PER_MAJOR;
 
+/**
+ * Rounds incoming numbers to whole units before validating.
+ *
+ * This is the tolerant edge of the ledger. A form field, a paste or an import may
+ * legitimately carry a fraction — 19.999 is a real thing to type — and the user
+ * asked for that to round rather than be refused. Money inside the engine is
+ * still never a float; `assertIntegerCents` remains the tripwire that fires if a
+ * fractional value ever reaches it, so leniency here does not weaken the core
+ * invariant.
+ */
+const toWholeUnits = (value: unknown): unknown =>
+  typeof value === "number" && Number.isFinite(value) ? Math.round(value) : value;
+
 export const isoDateSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Use the format YYYY-MM-DD")
@@ -32,17 +45,23 @@ export const horizonSchema = z.enum(["THIRTEEN_WEEKS", "SIX_MONTHS", "TWELVE_MON
 export const invoiceStatusSchema = z.enum(["EXPECTED", "PAID", "CANCELLED"]);
 export const invoiceRecurrenceSchema = z.enum(["NONE", "MONTHLY", "QUARTERLY"]);
 
-export const amountCentsSchema = z
-  .number()
-  .int("Amounts must be whole cents")
-  .min(-MAX_AMOUNT_CENTS, "Amount is too large")
-  .max(MAX_AMOUNT_CENTS, "Amount is too large");
+export const amountCentsSchema = z.preprocess(
+  toWholeUnits,
+  z
+    .number({ error: "Enter an amount" })
+    .int("Enter an amount")
+    .min(-MAX_AMOUNT_CENTS, "Amount is too large")
+    .max(MAX_AMOUNT_CENTS, "Amount is too large"),
+);
 
-export const positiveAmountCentsSchema = z
-  .number()
-  .int("Amounts must be whole cents")
-  .positive("Enter an amount greater than zero")
-  .max(MAX_AMOUNT_CENTS, "Amount is too large");
+export const positiveAmountCentsSchema = z.preprocess(
+  toWholeUnits,
+  z
+    .number({ error: "Enter an amount" })
+    .int("Enter an amount")
+    .positive("Enter an amount greater than zero")
+    .max(MAX_AMOUNT_CENTS, "Amount is too large"),
+);
 
 const trimmed = (max: number, message: string) => z.string().trim().max(max, message);
 const requiredText = (max: number, message: string) =>
@@ -82,11 +101,16 @@ export const invoiceSchema = z.object({
   amountCents: positiveAmountCentsSchema,
   issueDate: isoDateSchema,
   expectedPaymentDate: isoDateSchema,
-  paymentDelayDays: z
-    .number()
-    .int("Delay must be a whole number of days")
-    .min(0, "Delay cannot be negative")
-    .max(3650, "Delay is unrealistically large"),
+  // Days are discrete, so a typed fraction rounds to the nearest whole day
+  // rather than being refused with "must be a whole number".
+  paymentDelayDays: z.preprocess(
+    toWholeUnits,
+    z
+      .number({ error: "Enter a number of days" })
+      .int("Enter a number of days")
+      .min(0, "Delay cannot be negative")
+      .max(3650, "Delay is unrealistically large"),
+  ),
   status: invoiceStatusSchema,
   recurrence: invoiceRecurrenceSchema,
 });

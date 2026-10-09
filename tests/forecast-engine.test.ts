@@ -16,6 +16,7 @@ import {
   assertIntegerCents,
   centsToDecimalString,
   formatCents,
+  parseAmount,
   parseDecimalToCents,
   sumCents,
 } from "@/lib/money";
@@ -958,34 +959,65 @@ describe("item impact", () => {
 
 /* --------------------------------------------------- currency-safe money -- */
 
-describe("currency-safe integer-cent arithmetic", () => {
+describe("parsing typed money", () => {
   it("parses decimals without floating-point drift", () => {
     // The canonical trap: Number("19.99") * 100 === 1998.9999999999998
-    expect(parseDecimalToCents("19.99")).toBe(1999);
-    expect(parseDecimalToCents("0.1")).toBe(10);
-    expect(parseDecimalToCents("0.07")).toBe(7);
-    expect(parseDecimalToCents("1234.56")).toBe(123_456);
+    expect(parseDecimalToCents("19.99", { locale: "en-US" })).toBe(1999);
+    expect(parseDecimalToCents("0.1", { locale: "en-US" })).toBe(10);
+    expect(parseDecimalToCents("0.07", { locale: "en-US" })).toBe(7);
+    expect(parseDecimalToCents("1234.56", { locale: "en-US" })).toBe(123_456);
     expect(parseDecimalToCents("1500")).toBe(150_000);
-    expect(parseDecimalToCents("1500,55")).toBe(150_055);
-    expect(parseDecimalToCents("-20.5")).toBe(-2050);
+    expect(parseDecimalToCents("-20.5", { locale: "en-US" })).toBe(-2050);
     expect(parseDecimalToCents("0")).toBe(0);
   });
 
-  it("rounds half up on a third decimal", () => {
-    expect(parseDecimalToCents("1.005")).toBe(101);
-    expect(parseDecimalToCents("1.004")).toBe(100);
-    expect(parseDecimalToCents("1.999")).toBe(200);
+  it("rounds beyond two decimals instead of refusing the value", () => {
+    expect(parseDecimalToCents("1.005", { locale: "en-US" })).toBe(101);
+    expect(parseDecimalToCents("1.004", { locale: "en-US" })).toBe(100);
+    expect(parseDecimalToCents("1.999", { locale: "en-US" })).toBe(200);
+    expect(parseDecimalToCents("19.999", { locale: "en-US" })).toBe(2000);
+    expect(parseDecimalToCents("0.001", { locale: "en-US" })).toBe(0);
   });
 
-  it("rejects input that is not a plain amount", () => {
+  it("reports when a value had to be rounded so the UI can say so", () => {
+    expect(parseAmount("19.999", { locale: "en-US" })).toEqual({ cents: 2000, rounded: true });
+    expect(parseAmount("19.99", { locale: "en-US" })).toEqual({ cents: 1999, rounded: false });
+    // Trailing zeros are still exact.
+    expect(parseAmount("19.990", { locale: "en-US" })?.rounded).toBe(false);
+  });
+
+  it("accepts the number formats people actually type", () => {
+    // English grouping and decimal point.
+    expect(parseDecimalToCents("1,234.56", { locale: "en-US" })).toBe(123_456);
+    expect(parseDecimalToCents("1,500", { locale: "en-US" })).toBe(150_000);
+    // The same strings read the Dutch way.
+    expect(parseDecimalToCents("1.500", { locale: "nl-NL" })).toBe(150_000);
+    expect(parseDecimalToCents("1.234,56", { locale: "nl-NL" })).toBe(123_456);
+    expect(parseDecimalToCents("1,50", { locale: "nl-NL" })).toBe(150);
+    // Spaced grouping, and a pasted currency symbol.
+    expect(parseDecimalToCents("1 234,56", { locale: "nl-NL" })).toBe(123_456);
+    expect(parseDecimalToCents("€ 1.500,50", { locale: "nl-NL" })).toBe(150_050);
+    expect(parseDecimalToCents("$1,234.56", { locale: "en-US" })).toBe(123_456);
+    // A dot typed as a decimal point even where the locale groups with it.
+    expect(parseDecimalToCents("1500.50", { locale: "nl-NL" })).toBe(150_050);
+    // Mid-keystroke states are not errors.
+    expect(parseDecimalToCents("12.", { locale: "en-US" })).toBe(1200);
+    expect(parseDecimalToCents(".5", { locale: "en-US" })).toBe(50);
+  });
+
+  it("refuses input that is not a number, including malformed grouping", () => {
     expect(parseDecimalToCents("")).toBeNull();
     expect(parseDecimalToCents("abc")).toBeNull();
-    expect(parseDecimalToCents("1.2.3")).toBeNull();
-    expect(parseDecimalToCents("€12")).toBeNull();
-    expect(parseDecimalToCents("1e3")).toBeNull();
+    // Repeated separators are only grouping when the groups are well formed.
+    expect(parseDecimalToCents("1.2.3", { locale: "en-US" })).toBeNull();
+    expect(parseDecimalToCents("1,23,456", { locale: "en-US" })).toBeNull();
+    expect(parseDecimalToCents("1e3", { locale: "en-US" })).toBeNull();
+    expect(parseDecimalToCents("12-3", { locale: "en-US" })).toBeNull();
     expect(parseDecimalToCents("1234567890123456")).toBeNull();
   });
+});
 
+describe("integer-cent arithmetic", () => {
   it("sums cents exactly where floats would not", () => {
     const a = parseDecimalToCents("0.1") ?? 0;
     const b = parseDecimalToCents("0.2") ?? 0;

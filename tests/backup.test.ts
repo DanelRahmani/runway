@@ -208,16 +208,35 @@ describe("parseBackup validation", () => {
     expect(result.ok).toBe(false);
   });
 
-  it("rejects a forecast with a fractional cent amount", () => {
-    const broken = makeForecast();
+  it("rounds a fractional cent amount rather than refusing the file", () => {
+    /*
+     * A fractional cent cannot be represented, and the product decision is to
+     * round rather than reject so a hand-edited or third-party file still
+     * imports. The engine's own tripwire still refuses fractions internally.
+     */
+    const forecast = makeForecast();
     const payload = {
       schemaVersion: 1,
       exportedAt: "2026-01-01T00:00:00.000Z",
       app: "runway",
-      forecasts: [{ ...broken, startingBalanceCents: 1999.5 }],
+      forecasts: [{ ...forecast, startingBalanceCents: 1999.5 }],
     };
+
     const result = parseBackup(JSON.stringify(payload));
-    expect(result.ok).toBe(false);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.backup.forecasts[0]?.startingBalanceCents).toBe(2000);
+  });
+
+  it("still refuses an amount that is not a number at all", () => {
+    const forecast = makeForecast();
+    const payload = {
+      schemaVersion: 1,
+      exportedAt: "2026-01-01T00:00:00.000Z",
+      app: "runway",
+      forecasts: [{ ...forecast, startingBalanceCents: "1500" }],
+    };
+    expect(parseBackup(JSON.stringify(payload)).ok).toBe(false);
   });
 
   it("rejects an impossible calendar date", () => {

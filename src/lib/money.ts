@@ -11,12 +11,12 @@ import type { Currency } from "@/types/forecast";
  */
 export const MINOR_UNITS_PER_MAJOR = 100;
 
-/** Guard rail for `parseDecimalToCents`: keeps `intPart * 100` inside Number.MAX_SAFE_INTEGER. */
+/** Guard rail for parsing: keeps `intPart * 100` inside Number.MAX_SAFE_INTEGER. */
 const MAX_INTEGER_DIGITS = 12;
 
 export const CURRENCIES: readonly Currency[] = ["EUR", "USD", "JPY"];
 
-const DECIMAL_RE = /^-?\d{1,12}(?:[.,]\d{1,6})?$/;
+const CURRENCY_SYMBOLS = /[€$¥£]/g;
 
 /** True when `value` is a whole number of minor units. */
 export function isIntegerCents(value: number): boolean {
@@ -64,33 +64,173 @@ export function compareCents(a: number, b: number): number {
 }
 
 /**
- * Parses user input into whole cents without ever touching a float.
+ * Which character is the decimal point, and which groups thousands, in a locale.
  *
- * Accepts `1500`, `1500.5`, `1500.55`, `1500,55` and `-20`. The third decimal
- * decides rounding, computed on the digit itself rather than through
- * `Number(x) * 100` (which loses a cent on inputs such as `19.99`).
+ * Derived from `Intl` rather than a hardcoded table so it follows the user's own
+ * locale. For nl-NL that is `,` and `.`; for en-US the other way round.
+ */
+function localeSeparators(locale?: string): { decimal: string; group: string } {
+  const parts = new Intl.NumberFormat(locale).formatToParts(12_345.6);
+  return {
+    decimal: parts.find((part) => part.type === "decimal")?.value ?? ".",
+    group: parts.find((part) => part.type === "group")?.value ?? ",",
+  };
+}
+
+/**
+ * True when `text` is well-formed thousands grouping with `separator`.
+ *
+ * Guards against reading nonsense as a number: `1.234.567` groups correctly,
+ * `1.2.3` does not and should be refused rather than silently becoming 123.
+ */
+function isValidGrouping(text: string, separator: string): boolean {
+  const groups = text.split(separator);
+  const [first, ...rest] = groups;
+  if (first === undefined || rest.length === 0) return false;
+  if (!/^\d{1,3}$/.test(first)) return false;
+  return rest.every((group) => /^\d{3}$/.test(group));
+}
+
+export interface ParseOptions {
+  /** Overrides the locale used to interpret separators. Mostly for tests. */
+  locale?: string;
+}
+
+export interface ParsedAmount {
+  cents: number;
+  /**
+   * True when the typed value could not be represented exactly in cents and was
+   * rounded. The UI uses this to tell the user what was stored.
+   */
+  rounded: boolean;
+}
+
+/**
+ * Parses typed money into whole cents, tolerating how people actually write it.
+ *
+ * Accepts `1500`, `1500.5`, `1500,50`, `€ 1.500,50`, `1,234.56`, `1 234,56`,
+ * `12.` and `.5`. Separators are resolved using the locale: when both a dot and
+ * a comma appear, the rightmost is the decimal point and the other groups
+ * thousands; a lone separator repeated more than once always groups.
+ *
+ * Values with more than two decimals are rounded half-up on the digit itself —
+ * never via `Number(x) * 100`, which loses a cent on inputs like `19.99`.
+ *
+ * Returns `null` only when the input genuinely is not a number.
+ */
+export function parseAmount(raw: string, options: ParseOptions = {}): ParsedAmount | null {
+  let text = raw
+    .trim()
+    .replace(CURRENCY_SYMBOLS, "")
+    .replace(/[\s\u00A0\u202F]/g, "");
+
+  if (text === "") return null;
+
+  let negative = false;
+  if (text.startsWith("-") || text.startsWith("(")) {
+    negative = true;
+    text = text.replace(/^[-(\s]+/, "");
+  }
+  text = text.replace(/^\+/, "").replace(/\)$/, "");
+
+  // Anything left that is not a digit or a separator means this is not an amount.
+  if (text === "" || !/^[\d.,]+$/.test(text)) return null;
+
+  const { decimal, group } = localeSeparators(options.locale);
+  /*
+   * The character to treat as a grouping separator. Some locales group with a
+   * space, which has already been stripped, so fall back to whichever of the two
+   * familiar separators is not the decimal point.
+   */
+  const other = group === "." || group === "," ? group : decimal === "." ? "," : ".";
+
+  let integerPart = text;
+  let fractionPart = "";
+
+  const lastDecimal = text.lastIndexOf(decimal);
+  const lastOther = text.lastIndexOf(other);
+
+  if (lastDecimal !== -1 && lastOther !== -1) {
+    // Both kinds present, so the rightmost one is the decimal point.
+    if (lastDecimal > lastOther) {
+      integerPart = text.slice(0, lastDecimal).split(other).join("");
+      fractionPart = text.slice(lastDecimal + 1);
+    } else {
+      integerPart = text.slice(0, lastOther).split(decimal).join("");
+      fractionPart = text.slice(lastOther + 1);
+    }
+  } else if (lastDecimal !== -1) {
+    const occurrences = text.split(decimal).length - 1;
+    if (occurrences > 1) {
+      // Repeated separators can only be grouping, and only if the groups are valid.
+      if (!isValidGrouping(text, decimal)) return null;
+      integerPart = text.split(decimal).join("");
+    } else {
+      integerPart = text.slice(0, lastDecimal);
+      fractionPart = text.slice(lastDecimal + 1);
+    }
+  } else if (lastOther !== -1) {
+    const occurrences = text.split(other).length - 1;
+    if (occurrences > 1) {
+      if (!isValidGrouping(text, other)) return null;
+      integerPart = text.split(other).join("");
+    } else {
+      const digitsAfter = text.length - lastOther - 1;
+      const digitsBefore = text.slice(0, lastOther).length;
+      /*
+       * A lone separator that is not this locale's decimal point. Three trailing
+       * digits after a short group reads as grouping ("1,500" in en-US → 1500);
+       * anything else is treated as a decimal point the user typed out of habit.
+       */
+      if (digitsAfter === 3 && digitsBefore >= 1 && digitsBefore <= 3) {
+        integerPart = text.split(other).join("");
+      } else {
+        integerPart = text.slice(0, lastOther);
+        fractionPart = text.slice(lastOther + 1);
+      }
+    }
+  }
+
+  integerPart = integerPart.replace(/\D/g, "");
+  fractionPart = fractionPart.replace(/\D/g, "");
+
+  if (integerPart.length > MAX_INTEGER_DIGITS) return null;
+  // A trailing separator is someone mid-keystroke, not an error.
+  if (integerPart === "" && fractionPart === "") return null;
+
+  const spaced = fractionPart.slice(0, 3).padEnd(3, "0");
+  const kept = spaced.slice(0, 2);
+  const roundDigit = spaced.charCodeAt(2) - 48;
+
+  let cents = Number(integerPart === "" ? "0" : integerPart) * MINOR_UNITS_PER_MAJOR + Number(kept);
+  if (roundDigit >= 5) cents += 1;
+
+  const rounded = fractionPart.slice(2).replace(/0+$/, "") !== "";
+
+  return { cents: negative ? -cents : cents, rounded };
+}
+
+/**
+ * Convenience wrapper returning just the cents.
  *
  * @returns whole cents, or `null` when the input is not a valid amount.
  */
-export function parseDecimalToCents(raw: string): number | null {
-  const trimmed = raw.trim().replace(/\s/g, "");
-  if (trimmed === "") return null;
-  if (!DECIMAL_RE.test(trimmed)) return null;
+export function parseDecimalToCents(raw: string, options: ParseOptions = {}): number | null {
+  return parseAmount(raw, options)?.cents ?? null;
+}
 
-  const negative = trimmed.startsWith("-");
-  const body = negative ? trimmed.slice(1) : trimmed;
-  const [intPart = "0", fracPartRaw = ""] = body.split(/[.,]/);
-  if (intPart.length > MAX_INTEGER_DIGITS) return null;
-
-  // Pad to three digits so the third digit can drive half-up rounding.
-  const frac = fracPartRaw.padEnd(3, "0");
-  const kept = frac.slice(0, 2);
-  const roundDigit = frac.charCodeAt(2) - 48;
-
-  let cents = Number(intPart) * MINOR_UNITS_PER_MAJOR + Number(kept);
-  if (roundDigit >= 5) cents += 1;
-
-  return negative ? -cents : cents;
+/**
+ * Rounds any value to whole cents.
+ *
+ * Only for values that arrive from outside the ledger — a form field, an import,
+ * or a future compounding calculation. Money inside the engine is never a float,
+ * and `assertIntegerCents` remains the tripwire if one ever gets there.
+ */
+export function roundToCents(value: number): number {
+  if (!Number.isFinite(value)) {
+    throw new TypeError(`Runway: cannot round ${value} to cents`);
+  }
+  return Math.sign(value) * Math.round(Math.abs(value));
 }
 
 /** Inverse of {@link parseDecimalToCents}, for re-populating a money input field. */

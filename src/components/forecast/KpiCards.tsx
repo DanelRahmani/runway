@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { AnimatedMoney } from "@/components/forecast/AnimatedMoney";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatIsoDate } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
@@ -14,7 +15,7 @@ import type { Currency, Projection } from "@/types/forecast";
 
 interface KpiCardProps {
   label: string;
-  value: string;
+  value: ReactNode;
   hint?: string;
   tone?: "neutral" | "positive" | "negative";
   icon?: ReactNode;
@@ -67,13 +68,13 @@ export function KpiCards({
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <KpiCard
         label="Starting balance"
-        value={formatCents(summary.startingBalanceCents, currency)}
+        value={<AnimatedMoney cents={summary.startingBalanceCents} currency={currency} />}
         hint={`From ${formatIsoDate(projection.startDate)}`}
         icon={<WalletIcon className="size-3.5" />}
       />
       <KpiCard
         label="Projected ending balance"
-        value={formatCents(summary.endingBalanceCents, currency)}
+        value={<AnimatedMoney cents={summary.endingBalanceCents} currency={currency} />}
         tone={summary.endingBalanceCents < 0 ? "negative" : "positive"}
         hint={`On ${formatIsoDate(summary.endingDate)}`}
         icon={
@@ -86,7 +87,7 @@ export function KpiCards({
       />
       <KpiCard
         label="Minimum balance"
-        value={formatCents(summary.minimumBalanceCents, currency)}
+        value={<AnimatedMoney cents={summary.minimumBalanceCents} currency={currency} />}
         tone={summary.minimumBalanceCents < 0 ? "negative" : "positive"}
         hint={`Lowest on ${formatIsoDate(summary.minimumBalanceDate)}`}
       />
@@ -103,14 +104,14 @@ export function KpiCards({
       />
       <KpiCard
         label="Total inflows"
-        value={formatCents(summary.totalInflowCents, currency)}
+        value={<AnimatedMoney cents={summary.totalInflowCents} currency={currency} />}
         tone="positive"
         hint="Expected income across the horizon"
         icon={<ArrowUpRightIcon className="size-3.5" />}
       />
       <KpiCard
         label="Total outflows"
-        value={formatCents(summary.totalOutflowCents, currency)}
+        value={<AnimatedMoney cents={summary.totalOutflowCents} currency={currency} />}
         tone="negative"
         hint={`Net change ${formatCents(netCents, currency, { signed: true })}`}
         icon={<ArrowDownRightIcon className="size-3.5" />}
