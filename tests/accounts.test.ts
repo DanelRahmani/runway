@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { accountProjection, accountsFor, SPENDING_ACCOUNT_ID } from "@/lib/forecast/accounts";
+import { accountProjection, accountsFor, growthRows, SPENDING_ACCOUNT_ID } from "@/lib/forecast/accounts";
 import { runProjection } from "@/lib/forecast/engine";
 import type { Account, Forecast, IsoDate, OneOffItem, RecurringItem } from "@/types/forecast";
 
@@ -197,5 +197,49 @@ describe("account projection", () => {
 
     expect(projection.spendableClosingCents).toBe(140_000);
     expect(accountsFor(forecast)).toHaveLength(2);
+  });
+});
+
+/*
+ * The growth chart draws one line per pot with `dataKey={account.id}`, which
+ * recharts resolves against the top level of each row. The engine nests balances
+ * under `cents`, so if the reshape ever stopped lifting them out, every line would
+ * come out empty — axes drawn, no series, nothing thrown, and nothing in the build
+ * to catch it. Hence a test on the shape itself rather than on the picture.
+ */
+describe("growth rows for the chart", () => {
+  it("carries every account id as a top-level number key", () => {
+    const forecast = makeForecast({
+      accounts: [pot(), pot({ id: "broker", name: "Broker", kind: "INVESTMENT" })],
+      oneOffItems: [oneOff(30_000, "Savings", "2026-01-05", "savings")],
+    });
+    const projection = accountProjection(forecast, runProjection(forecast));
+
+    const rows = growthRows(projection.series);
+
+    expect(rows).toHaveLength(projection.series.length);
+    for (const row of rows) {
+      for (const account of accountsFor(forecast)) {
+        expect(typeof row[account.id], `${account.id} missing from row`).toBe("number");
+      }
+    }
+  });
+
+  it("starts on the opening balances and ends on the closing ones", () => {
+    const forecast = makeForecast({
+      accounts: [pot({ startingBalanceCents: 500_000, annualRateBps: 600 })],
+    });
+    const projection = accountProjection(forecast, runProjection(forecast));
+
+    const rows = growthRows(projection.series);
+    const last = rows.at(-1);
+
+    expect(rows[0]?.["savings"]).toBe(500_000);
+    expect(last?.["savings"]).toBe(
+      projection.accounts.find((entry) => entry.account.id === "savings")?.closingCents,
+    );
+
+    // The last row has to sit above the first, or the rate is not reaching the chart.
+    expect(last?.["savings"]).toBeGreaterThan(500_000);
   });
 });

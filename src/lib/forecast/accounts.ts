@@ -63,6 +63,22 @@ export interface AccountProjection {
   hasGrowth: boolean;
 }
 
+/** One chartable day: the date plus every account's closing balance, keyed by id. */
+export type GrowthRow = { date: IsoDate } & Record<string, number | string>;
+
+/**
+ * The series reshaped for charting.
+ *
+ * Recharts reads a series' `dataKey` off the top level of each row, so the nested
+ * `cents` map cannot be plotted as it stands. This lives here rather than in the
+ * chart component because it is the contract between the two: the key a line asks
+ * for has to be a key a row carries, and a mismatch draws empty axes with no line
+ * and no error. Being pure, it can be checked without a browser.
+ */
+export function growthRows(series: readonly AccountSeriesPoint[]): GrowthRow[] {
+  return series.map((point) => ({ date: point.date, ...point.cents }));
+}
+
 /** Where each transfer's money is headed, keyed by `source:id`. */
 function transferRoutes(forecast: Forecast): Map<string, string> {
   const routes = new Map<string, string>();

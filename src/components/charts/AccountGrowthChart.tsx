@@ -16,7 +16,7 @@ import {
   paddedDomain,
   seriesColor,
 } from "@/components/charts/chart-utils";
-import type { AccountSeriesPoint } from "@/lib/forecast/accounts";
+import { growthRows, type AccountSeriesPoint } from "@/lib/forecast/accounts";
 import { formatIsoDate } from "@/lib/dates";
 import { formatCents, formatCentsCompact } from "@/lib/money";
 import type { Account, Currency } from "@/types/forecast";
@@ -53,13 +53,10 @@ export function AccountGrowthChart({
   height = 260,
 }: AccountGrowthChartProps) {
   /*
-   * Recharts reads a `dataKey` off the top level of each row, so the engine's
-   * nested `cents` map is flattened once here rather than reached into per line.
+   * Flattened once, because every line below reads its `dataKey` off the top level
+   * of a row. `growthRows` owns that shape so it can be tested without a browser.
    */
-  const data = useMemo(
-    () => series.map((point) => ({ date: point.date, ...point.cents })),
-    [series],
-  );
+  const data = useMemo(() => growthRows(series), [series]);
 
   const ids = useMemo(() => accounts.map((account) => account.id), [accounts]);
 
