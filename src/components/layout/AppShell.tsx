@@ -1,4 +1,4 @@
-import { AlertTriangleIcon, InfoIcon } from "lucide-react";
+import { AlertTriangleIcon, ArrowUpRightIcon, InfoIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Disclaimer } from "@/components/layout/Disclaimer";
@@ -87,15 +87,46 @@ export function AppShell({ children, actions, wide = false }: AppShellProps) {
               <Disclaimer />
             </AlertDescription>
           </Alert>
-          <p className="text-muted-foreground text-xs">
-            Everything you enter stays in this browser. Runway has no accounts, no server and no
-            tracking.
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+            <p className="text-muted-foreground text-xs">
+              Everything you enter stays in this browser. Runway has no accounts, no server and no
+              tracking.
+            </p>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <ExternalLink
+                href="https://github.com/DanelRahmani/runway"
+                label="Source on GitHub"
+              />
+              <ExternalLink href="https://danelrahmani.com" label="danelrahmani.com" />
+            </div>
+          </div>
         </div>
       </footer>
 
       <Toaster />
     </div>
+  );
+}
+
+/**
+ * A footer link that leaves the app.
+ *
+ * `rel="noreferrer"` alongside `noopener`: `noopener` stops the new tab reaching
+ * back through `window.opener`, and `noreferrer` additionally withholds the
+ * referring URL, which is the safer default now that `noreferrer` implies
+ * `noopener` in every browser this supports.
+ */
+function ExternalLink({ href, label }: { href: string; label: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer noopener"
+      className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-sm text-xs underline-offset-4 transition-colors hover:underline focus-visible:ring-2 focus-visible:outline-none"
+    >
+      {label}
+      <ArrowUpRightIcon className="size-3" aria-hidden="true" />
+    </a>
   );
 }
 
