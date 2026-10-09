@@ -2,6 +2,7 @@ import { DownloadIcon } from "lucide-react";
 import { useState } from "react";
 
 import { BalanceChart, type BalancePoint } from "@/components/charts/BalanceChart";
+import { CategoryBreakdown } from "@/components/charts/CategoryBreakdown";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -83,6 +84,18 @@ export function OverviewTab({ forecast, projection }: OverviewTabProps) {
       </Card>
 
       <ProjectionTable periods={periods} currency={forecast.currency} granularity={granularity} />
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <CategoryBreakdown projection={projection} currency={forecast.currency} variant="spending" />
+        <CategoryBreakdown projection={projection} currency={forecast.currency} variant="income" />
+      </div>
+
+      {/*
+       * Rendered even when empty: the empty state is what tells a new user that
+       * Savings, Investing, Pension and Debt repayment are treated as kept money
+       * rather than spending.
+       */}
+      <CategoryBreakdown projection={projection} currency={forecast.currency} variant="transfers" />
     </div>
   );
 }

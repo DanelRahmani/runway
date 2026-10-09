@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { Disclaimer } from "@/components/layout/Disclaimer";
 import { ThemeSwitcher } from "@/components/layout/ThemeSwitcher";
+import { Toaster } from "@/components/layout/Toaster";
 import { Alert, AlertDescription, AlertIcon } from "@/components/ui/alert";
 import { useForecasts } from "@/lib/storage/forecasts";
 import { cn } from "@/lib/utils";
@@ -92,6 +93,8 @@ export function AppShell({ children, actions, wide = false }: AppShellProps) {
           </p>
         </div>
       </footer>
+
+      <Toaster />
     </div>
   );
 }

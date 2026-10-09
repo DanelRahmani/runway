@@ -99,6 +99,36 @@ export interface ProjectionEntry {
   label: string;
   direction: Direction;
   amountCents: number;
+  /**
+   * Carried through so the breakdown can be computed from the projection rather
+   * than from the raw items. That matters: an item's `amountCents` is one
+   * occurrence, so summing items would report a monthly rent as a single month
+   * instead of the whole horizon.
+   */
+  category: string;
+}
+
+/** A category's total movement across the whole projection. */
+export interface CategoryTotal {
+  category: string;
+  direction: Direction;
+  totalCents: number;
+}
+
+/** How much one item or invoice actually costs or earns across the horizon. */
+export interface ItemImpact {
+  source: ProjectionEntry["source"];
+  id: string;
+  label: string;
+  direction: Direction;
+  category: string;
+  /** The per-occurrence amount. */
+  amountCents: number;
+  /** `amountCents × occurrences`. */
+  totalCents: number;
+  occurrences: number;
+  firstDate: IsoDate;
+  lastDate: IsoDate;
 }
 
 export interface ProjectionDay {

@@ -227,19 +227,19 @@ export function ForecastPage() {
 
         <TabsContent value="recurring">
           <ErrorBoundary label="recurring items">
-            <RecurringTab forecast={forecast} update={update} />
+            <RecurringTab forecast={forecast} projection={projection} update={update} />
           </ErrorBoundary>
         </TabsContent>
 
         <TabsContent value="one-off">
           <ErrorBoundary label="one-off items">
-            <OneOffTab forecast={forecast} update={update} />
+            <OneOffTab forecast={forecast} projection={projection} update={update} />
           </ErrorBoundary>
         </TabsContent>
 
         <TabsContent value="invoices">
           <ErrorBoundary label="invoices">
-            <InvoicesTab forecast={forecast} update={update} />
+            <InvoicesTab forecast={forecast} projection={projection} update={update} />
           </ErrorBoundary>
         </TabsContent>
 

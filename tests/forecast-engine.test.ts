@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
 
 import { addMonths, daysBetween, eachDay, horizonEndDate } from "@/lib/dates";
-import { runProjection } from "@/lib/forecast/engine";
+import { aggregate } from "@/lib/forecast/aggregate";
+import {
+  categoryTotals,
+  impactFor,
+  itemImpact,
+  runProjection,
+  INVOICE_CATEGORY,
+  UNCATEGORISED,
+} from "@/lib/forecast/engine";
 import { recurringOccurrences } from "@/lib/forecast/recurrence";
 import { compareProjections, describeScenarioImpact } from "@/lib/forecast/scenarios";
-import { aggregate } from "@/lib/forecast/aggregate";
 import {
   assertIntegerCents,
   centsToDecimalString,
@@ -740,6 +747,212 @@ describe("starter forecasts", () => {
   it("validates against the persisted schema", () => {
     expect(validateForecast(createStarterForecast("PERSONAL", start)).ok).toBe(true);
     expect(validateForecast(createStarterForecast("BUSINESS", start)).ok).toBe(true);
+  });
+});
+
+/* ------------------------------------------------- categories and impact -- */
+
+describe("category totals", () => {
+  it("counts the whole horizon, not one occurrence", () => {
+    // The bug this guards: summing item amounts would report a year of €100 rent
+    // as €100 rather than €1,200.
+    const forecast = makeForecast({
+      horizon: "TWELVE_MONTHS",
+      recurringItems: [makeRecurring({ amountCents: 10_000, category: "Housing" })],
+    });
+    const totals = categoryTotals(runProjection(forecast));
+
+    expect(totals).toHaveLength(1);
+    expect(totals[0]?.category).toBe("Housing");
+    expect(totals[0]?.totalCents).toBe(120_000);
+  });
+
+  it("groups by direction so income and expense never merge", () => {
+    const forecast = makeForecast({
+      horizon: "THIRTEEN_WEEKS",
+      recurringItems: [
+        makeRecurring({ id: "in", direction: "INFLOW", amountCents: 50_000, category: "Tax" }),
+        makeRecurring({ id: "out", direction: "OUTFLOW", amountCents: 20_000, category: "Tax" }),
+      ],
+    });
+    const totals = categoryTotals(runProjection(forecast));
+
+    expect(totals).toHaveLength(2);
+    const inflow = totals.find((total) => total.direction === "INFLOW");
+    const outflow = totals.find((total) => total.direction === "OUTFLOW");
+    expect(inflow?.totalCents).toBe(200_000);
+    expect(outflow?.totalCents).toBe(80_000);
+  });
+
+  it("files invoices under client income so inbound money is complete", () => {
+    const forecast = makeForecast({
+      horizon: "SIX_MONTHS",
+      invoices: [
+        {
+          id: "inv-1",
+          clientName: "Acme",
+          amountCents: 100_000,
+          issueDate: "2026-01-01",
+          expectedPaymentDate: "2026-02-01",
+          paymentDelayDays: 0,
+          status: "EXPECTED",
+          recurrence: "NONE",
+        },
+      ],
+    });
+    const totals = categoryTotals(runProjection(forecast));
+
+    expect(totals).toHaveLength(1);
+    expect(totals[0]?.category).toBe(INVOICE_CATEGORY);
+    expect(totals[0]?.direction).toBe("INFLOW");
+    expect(totals[0]?.totalCents).toBe(100_000);
+  });
+
+  it("buckets uncategorised items rather than dropping them", () => {
+    const forecast = makeForecast({
+      oneOffItems: [
+        {
+          id: "one-1",
+          name: "Mystery",
+          direction: "OUTFLOW",
+          amountCents: 5_000,
+          date: "2026-01-05",
+        },
+      ],
+    });
+    const totals = categoryTotals(runProjection(forecast));
+
+    expect(totals[0]?.category).toBe(UNCATEGORISED);
+    expect(totals[0]?.totalCents).toBe(5_000);
+  });
+
+  it("sorts largest first and skips inactive items", () => {
+    const forecast = makeForecast({
+      recurringItems: [
+        makeRecurring({ id: "small", amountCents: 1_000, category: "Small" }),
+        makeRecurring({ id: "big", amountCents: 90_000, category: "Big" }),
+        makeRecurring({ id: "off", amountCents: 999_000, category: "Off", isActive: false }),
+      ],
+    });
+    const totals = categoryTotals(runProjection(forecast));
+
+    expect(totals.map((total) => total.category)).toEqual(["Big", "Small"]);
+  });
+
+  it("returns an empty list for a forecast with no movement", () => {
+    expect(categoryTotals(runProjection(makeForecast()))).toEqual([]);
+  });
+});
+
+describe("item impact", () => {
+  it("counts occurrences and multiplies out over the horizon", () => {
+    const forecast = makeForecast({
+      horizon: "TWELVE_MONTHS",
+      recurringItems: [makeRecurring({ amountCents: 13_500 })],
+    });
+    const impact = impactFor(itemImpact(runProjection(forecast)), "recurring", "item-1");
+
+    expect(impact).not.toBeNull();
+    expect(impact?.occurrences).toBe(12);
+    expect(impact?.amountCents).toBe(13_500);
+    expect(impact?.totalCents).toBe(162_000);
+    expect(impact?.firstDate).toBe("2026-01-01");
+    expect(impact?.lastDate).toBe("2026-12-01");
+  });
+
+  it("reports a single occurrence for a one-off item", () => {
+    const forecast = makeForecast({
+      oneOffItems: [
+        {
+          id: "one-1",
+          name: "Laptop",
+          direction: "OUTFLOW",
+          amountCents: 200_000,
+          date: "2026-02-10",
+        },
+      ],
+    });
+    const impact = impactFor(itemImpact(runProjection(forecast)), "one-off", "one-1");
+
+    expect(impact?.occurrences).toBe(1);
+    expect(impact?.totalCents).toBe(200_000);
+    expect(impact?.firstDate).toBe("2026-02-10");
+  });
+
+  it("gives an inactive item no impact, since it is not projected", () => {
+    const forecast = makeForecast({ recurringItems: [makeRecurring({ isActive: false })] });
+    expect(impactFor(itemImpact(runProjection(forecast)), "recurring", "item-1")).toBeNull();
+  });
+
+  it("gives an item outside the horizon no impact", () => {
+    const forecast = makeForecast({
+      oneOffItems: [
+        {
+          id: "one-1",
+          name: "Far future",
+          direction: "OUTFLOW",
+          amountCents: 200_000,
+          date: "2030-02-10",
+        },
+      ],
+    });
+    expect(impactFor(itemImpact(runProjection(forecast)), "one-off", "one-1")).toBeNull();
+  });
+
+  it("counts a repeating invoice every time it fires", () => {
+    const forecast = makeForecast({
+      horizon: "SIX_MONTHS",
+      invoices: [
+        {
+          id: "inv-1",
+          clientName: "Retainer",
+          amountCents: 50_000,
+          issueDate: "2026-01-01",
+          expectedPaymentDate: "2026-01-15",
+          paymentDelayDays: 0,
+          status: "EXPECTED",
+          recurrence: "MONTHLY",
+        },
+      ],
+    });
+    const impact = impactFor(itemImpact(runProjection(forecast)), "invoice", "inv-1");
+
+    expect(impact?.occurrences).toBe(6);
+    expect(impact?.totalCents).toBe(300_000);
+  });
+
+  it("keeps every total a whole number of cents", () => {
+    const forecast = makeForecast({
+      horizon: "TWELVE_MONTHS",
+      recurringItems: [
+        makeRecurring({ id: "w", frequency: "WEEKLY", amountCents: 12_345, category: "Weekly" }),
+        makeRecurring({ id: "q", frequency: "QUARTERLY", amountCents: 9_999, category: "Quarterly" }),
+      ],
+    });
+    const projection = runProjection(forecast);
+
+    for (const total of categoryTotals(projection)) {
+      expect(Number.isInteger(total.totalCents)).toBe(true);
+    }
+    for (const impact of itemImpact(projection).values()) {
+      expect(Number.isInteger(impact.totalCents)).toBe(true);
+      expect(impact.totalCents).toBe(impact.amountCents * impact.occurrences);
+    }
+  });
+
+  it("reconciles to the projection's own inflow and outflow totals", () => {
+    const projection = runProjection(createStarterForecast("BUSINESS", "2026-01-01"));
+    const totals = categoryTotals(projection);
+
+    const income = totals
+      .filter((total) => total.direction === "INFLOW")
+      .reduce((sum, total) => sum + total.totalCents, 0);
+    const expense = totals
+      .filter((total) => total.direction === "OUTFLOW")
+      .reduce((sum, total) => sum + total.totalCents, 0);
+
+    expect(income).toBe(projection.summary.totalInflowCents);
+    expect(expense).toBe(projection.summary.totalOutflowCents);
   });
 });
 

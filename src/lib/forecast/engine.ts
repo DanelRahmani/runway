@@ -2,8 +2,10 @@ import { daysBetween, eachDay, horizonEndDate } from "@/lib/dates";
 import { assertIntegerCents } from "@/lib/money";
 import { invoiceOccurrences, recurringOccurrences } from "@/lib/forecast/recurrence";
 import type {
+  CategoryTotal,
   Forecast,
   IsoDate,
+  ItemImpact,
   Projection,
   ProjectionDay,
   ProjectionEntry,
@@ -21,6 +23,12 @@ import type {
  * Money is only ever added or subtracted as integer cents. The running balance
  * starts from `startingBalanceCents` and every mutation is an integer add.
  */
+
+/** Bucket label for entries with no category of their own. */
+export const UNCATEGORISED = "Uncategorised";
+
+/** Invoices have a client rather than a category; this is how they appear in breakdowns. */
+export const INVOICE_CATEGORY = "Client income";
 
 /** Entry dates bucketed by day, built once per projection. */
 interface DayLedger {
@@ -77,6 +85,7 @@ export function buildLedger(forecast: Forecast, startDate: IsoDate, endDate: Iso
         label: item.name,
         direction: item.direction,
         amountCents: item.amountCents,
+        category: item.category ?? UNCATEGORISED,
       });
     }
   }
@@ -91,6 +100,7 @@ export function buildLedger(forecast: Forecast, startDate: IsoDate, endDate: Iso
       label: item.name,
       direction: item.direction,
       amountCents: item.amountCents,
+      category: item.category ?? UNCATEGORISED,
     });
   }
 
@@ -115,6 +125,9 @@ export function buildLedger(forecast: Forecast, startDate: IsoDate, endDate: Iso
         label: invoice.clientName,
         direction: "INFLOW",
         amountCents: invoice.amountCents,
+        // Invoices carry a client, not a category. Labelling them here keeps the
+        // category breakdown a complete picture of inbound money.
+        category: INVOICE_CATEGORY,
       });
     }
   }
@@ -234,37 +247,80 @@ export function balanceOn(projection: Projection, date: IsoDate): number | null 
   return day === undefined ? null : day.closingCents;
 }
 
-/** Net cash movement attributed to a named category, largest first. Used by the insight strip. */
-export function categoryTotals(
-  forecast: Forecast,
-): Array<{ category: string; direction: "INFLOW" | "OUTFLOW"; totalCents: number }> {
-  const totals = new Map<string, { direction: "INFLOW" | "OUTFLOW"; totalCents: number }>();
+/**
+ * Total movement per category across the **whole horizon**, largest first.
+ *
+ * Derived from the projection rather than the raw items, so a monthly cost is
+ * counted every month it fires. Summing item amounts instead would report a
+ * year of rent as a single month.
+ */
+export function categoryTotals(projection: Projection): CategoryTotal[] {
+  const totals = new Map<string, CategoryTotal>();
 
-  const record = (
-    category: string | undefined,
-    direction: "INFLOW" | "OUTFLOW",
-    amountCents: number,
-  ): void => {
-    const key = `${direction}:${category ?? "Uncategorised"}`;
-    const existing = totals.get(key);
-    if (existing === undefined) {
-      totals.set(key, { direction, totalCents: amountCents });
-    } else {
-      existing.totalCents += amountCents;
+  for (const day of projection.days) {
+    for (const entry of day.entries) {
+      const key = `${entry.direction}:${entry.category}`;
+      const existing = totals.get(key);
+      if (existing === undefined) {
+        totals.set(key, {
+          category: entry.category,
+          direction: entry.direction,
+          totalCents: entry.amountCents,
+        });
+      } else {
+        existing.totalCents += entry.amountCents;
+      }
     }
-  };
-
-  for (const item of forecast.recurringItems) {
-    if (!item.isActive) continue;
-    record(item.category, item.direction, item.amountCents);
-  }
-  for (const item of forecast.oneOffItems) {
-    record(item.category, item.direction, item.amountCents);
   }
 
-  return [...totals.entries()]
-    .map(([key, value]) => ({ category: key.split(":").slice(1).join(":"), ...value }))
-    .sort((a, b) => b.totalCents - a.totalCents);
+  return [...totals.values()].sort((a, b) => b.totalCents - a.totalCents);
+}
+
+/**
+ * What each individual item or invoice actually does to the forecast.
+ *
+ * Keyed by `source:id` so a table row can look up its own impact. This is where
+ * the occurrence count lives, which is what makes "12 occurrences, €16,200"
+ * possible for a monthly item.
+ */
+export function itemImpact(projection: Projection): Map<string, ItemImpact> {
+  const impacts = new Map<string, ItemImpact>();
+
+  for (const day of projection.days) {
+    for (const entry of day.entries) {
+      const key = `${entry.source}:${entry.id}`;
+      const existing = impacts.get(key);
+      if (existing === undefined) {
+        impacts.set(key, {
+          source: entry.source,
+          id: entry.id,
+          label: entry.label,
+          direction: entry.direction,
+          category: entry.category,
+          amountCents: entry.amountCents,
+          totalCents: entry.amountCents,
+          occurrences: 1,
+          firstDate: day.date,
+          lastDate: day.date,
+        });
+      } else {
+        existing.totalCents += entry.amountCents;
+        existing.occurrences += 1;
+        existing.lastDate = day.date;
+      }
+    }
+  }
+
+  return impacts;
+}
+
+/** Impact for one entry, or `null` when it never fires inside the horizon. */
+export function impactFor(
+  impacts: Map<string, ItemImpact>,
+  source: ItemImpact["source"],
+  id: string,
+): ItemImpact | null {
+  return impacts.get(`${source}:${id}`) ?? null;
 }
 
 /** Days of runway from the start date, or `null` when cash never runs out. */

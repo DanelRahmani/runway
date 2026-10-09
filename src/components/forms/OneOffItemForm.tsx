@@ -18,13 +18,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { createId } from "@/lib/utils";
 import { validateOneOffItem, type FieldErrors } from "@/lib/validation";
-import type { Currency, IsoDate, OneOffItem } from "@/types/forecast";
+import type { Currency, ForecastKind, IsoDate, OneOffItem } from "@/types/forecast";
 
 interface OneOffItemFormProps {
   onClose: () => void;
   item: OneOffItem | null;
   currency: Currency;
   defaultDate: IsoDate;
+  forecastKind: ForecastKind | undefined;
   onSubmit: (item: OneOffItem) => void;
 }
 
@@ -34,6 +35,7 @@ export function OneOffItemForm({
   item,
   currency,
   defaultDate,
+  forecastKind,
   onSubmit,
 }: OneOffItemFormProps) {
   const [draft, setDraft] = useState<LineItemDraft>(() =>
@@ -88,6 +90,7 @@ export function OneOffItemForm({
             onChange={setDraft}
             errors={errors}
             currency={currency}
+            forecastKind={forecastKind}
             idPrefix="one-off"
           />
 

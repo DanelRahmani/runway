@@ -20,7 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { createId } from "@/lib/utils";
 import { validateRecurringItem, type FieldErrors } from "@/lib/validation";
-import type { Currency, Frequency, IsoDate, RecurringItem } from "@/types/forecast";
+import type { Currency, ForecastKind, Frequency, IsoDate, RecurringItem } from "@/types/forecast";
 
 const FREQUENCIES: ReadonlyArray<{ value: Frequency; label: string }> = [
   { value: "WEEKLY", label: "Weekly" },
@@ -36,6 +36,7 @@ interface RecurringItemFormProps {
   item: RecurringItem | null;
   currency: Currency;
   defaultStartDate: IsoDate;
+  forecastKind: ForecastKind | undefined;
   onSubmit: (item: RecurringItem) => void;
 }
 
@@ -51,6 +52,7 @@ export function RecurringItemForm({
   item,
   currency,
   defaultStartDate,
+  forecastKind,
   onSubmit,
 }: RecurringItemFormProps) {
   const [draft, setDraft] = useState<LineItemDraft>(() =>
@@ -113,6 +115,7 @@ export function RecurringItemForm({
             onChange={setDraft}
             errors={errors}
             currency={currency}
+            forecastKind={forecastKind}
             idPrefix="recurring"
           />
 

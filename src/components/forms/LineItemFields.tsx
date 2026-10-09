@@ -1,9 +1,11 @@
 import { Field } from "@/components/forms/Field";
+import { CategoryPicker } from "@/components/forms/CategoryPicker";
+import { NamePicker } from "@/components/forms/NamePicker";
 import { MoneyInput } from "@/components/forms/MoneyInput";
 import { Input } from "@/components/ui/input";
 import type { LineItemDraft } from "@/components/forms/lineItemDraft";
 import type { FieldErrors } from "@/lib/validation";
-import type { Currency } from "@/types/forecast";
+import type { Currency, ForecastKind } from "@/types/forecast";
 import { cn } from "@/lib/utils";
 
 interface LineItemFieldsProps {
@@ -11,18 +13,36 @@ interface LineItemFieldsProps {
   onChange: (draft: LineItemDraft) => void;
   errors: FieldErrors;
   currency: Currency;
+  /** Shapes which category suggestions are offered. */
+  forecastKind: ForecastKind | undefined;
   idPrefix: string;
 }
 
-export function LineItemFields({ draft, onChange, errors, currency, idPrefix }: LineItemFieldsProps) {
+export function LineItemFields({
+  draft,
+  onChange,
+  errors,
+  currency,
+  forecastKind,
+  idPrefix,
+}: LineItemFieldsProps) {
   return (
     <>
-      <Field label="Name" htmlFor={`${idPrefix}-name`} error={errors.name} required>
-        <Input
+      <Field
+        label="Name"
+        htmlFor={`${idPrefix}-name`}
+        error={errors.name}
+        hint="Pick one, or type your own."
+        required
+      >
+        <NamePicker
+          id={`${idPrefix}-name`}
           value={draft.name}
-          placeholder="e.g. Rent"
-          autoComplete="off"
-          onChange={(event) => onChange({ ...draft, name: event.target.value })}
+          onChange={(name) => onChange({ ...draft, name })}
+          onImpliedCategory={(category) => onChange({ ...draft, name: draft.name, category })}
+          categoryIsEmpty={draft.category.trim() === ""}
+          kind={forecastKind}
+          direction={draft.direction}
         />
       </Field>
 
@@ -65,15 +85,26 @@ export function LineItemFields({ draft, onChange, errors, currency, idPrefix }: 
       </Field>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Field label="Category" htmlFor={`${idPrefix}-category`} error={errors.category}>
-          <Input
+        {/*
+         * The category picker spans both columns: its suggestion chips need the
+         * width, and it reads as one block with the free-text field above them.
+         */}
+        <Field
+          label="Category"
+          htmlFor={`${idPrefix}-category`}
+          error={errors.category}
+          hint="Pick one, or type your own."
+          className="sm:col-span-2"
+        >
+          <CategoryPicker
+            id={`${idPrefix}-category`}
             value={draft.category}
-            placeholder="e.g. Housing"
-            autoComplete="off"
-            onChange={(event) => onChange({ ...draft, category: event.target.value })}
+            onChange={(category) => onChange({ ...draft, category })}
+            kind={forecastKind}
+            direction={draft.direction}
           />
         </Field>
-        <Field label="Note" htmlFor={`${idPrefix}-note`} error={errors.note}>
+        <Field label="Note" htmlFor={`${idPrefix}-note`} error={errors.note} className="sm:col-span-2">
           <Input
             value={draft.note}
             placeholder="Optional detail"
