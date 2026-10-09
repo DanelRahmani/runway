@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { todayIso } from "@/lib/dates";
 import { defaultForecastName, KIND_DESCRIPTIONS, KIND_LABELS } from "@/lib/sample";
+import { currencyOptionLabel } from "@/lib/money";
 import { createId, cn } from "@/lib/utils";
 import { forecastSchema, toFieldErrors, type FieldErrors } from "@/lib/validation";
 import { CURRENCIES, type Currency, type Forecast, type ForecastKind, type Horizon } from "@/types/forecast";
@@ -214,7 +215,7 @@ export function ForecastForm({
               >
                 {CURRENCIES.map((currency) => (
                   <option key={currency} value={currency}>
-                    {currency}
+                    {currencyOptionLabel(currency)}
                   </option>
                 ))}
               </select>

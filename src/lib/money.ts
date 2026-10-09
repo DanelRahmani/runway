@@ -305,6 +305,33 @@ export function formatCentsCompact(cents: number, currency: Currency, locale?: s
 }
 
 /**
+ * The currency's symbol, for compact pickers where the code alone is ambiguous.
+ *
+ * Falls back to the code when a locale has no symbol for it — the point is to be
+ * clearer than the bare code, never to render an empty space.
+ */
+export function currencySymbol(currency: Currency, locale?: string): string {
+  const parts = new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).formatToParts(0);
+
+  return parts.find((part) => part.type === "currency")?.value ?? currency;
+}
+
+/**
+ * Label for a currency picker: `"€ EUR"`, or just the code when there is no symbol.
+ *
+ * Some currencies genuinely have no symbol — English locales render CHF as the
+ * letters "CHF" — and printing "CHF CHF" would read as a bug.
+ */
+export function currencyOptionLabel(currency: Currency, locale?: string): string {
+  const symbol = currencySymbol(currency, locale);
+  return symbol === currency ? currency : `${symbol} ${currency}`;
+}
+
+/**
  * Plural-safe currency label, e.g. `EUR` → `euros`. Used in prose, not tables.
  *
  * A `Record` rather than a `switch` so an added currency is a compile error here

@@ -15,6 +15,8 @@ import { compareProjections, describeScenarioImpact } from "@/lib/forecast/scena
 import {
   assertIntegerCents,
   centsToDecimalString,
+  currencySymbol,
+  currencyOptionLabel,
   formatCents,
   parseAmount,
   parseDecimalToCents,
@@ -22,7 +24,7 @@ import {
 } from "@/lib/money";
 import { createStarterForecast, defaultForecastName } from "@/lib/sample";
 import { validateForecast } from "@/lib/validation";
-import type { Forecast, Frequency, RecurringItem } from "@/types/forecast";
+import { CURRENCIES, type Forecast, type Frequency, type RecurringItem } from "@/types/forecast";
 
 function makeForecast(overrides: Partial<Forecast> = {}): Forecast {
   return {
@@ -1058,6 +1060,20 @@ describe("integer-cent arithmetic", () => {
     expect(formatCents(150_000, "JPY", { locale: "en-US" })).toBe("¥1,500");
     expect(formatCents(-150_000, "EUR", { locale: "en-GB" })).toBe("-€1,500.00");
     expect(formatCents(150_000, "EUR", { locale: "en-GB", signed: true })).toBe("+€1,500.00");
+  });
+
+  it("labels every currency with its symbol, or the code alone when there is none", () => {
+    expect(currencyOptionLabel("EUR", "en-GB")).toBe("€ EUR");
+    expect(currencyOptionLabel("USD", "en-US")).toBe("$ USD");
+    // English locales render CHF as the letters themselves, so it must not
+    // come out as "CHF CHF".
+    expect(currencyOptionLabel("CHF", "en-GB")).toBe("CHF");
+
+    for (const currency of CURRENCIES) {
+      // Whatever the locale data says, something must always be shown.
+      expect(currencySymbol(currency, "en-GB").length, currency).toBeGreaterThan(0);
+      expect(currencyOptionLabel(currency, "en-GB").length, currency).toBeGreaterThan(0);
+    }
   });
 
   it("keeps a long run of additions exact", () => {
