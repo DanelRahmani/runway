@@ -1,8 +1,9 @@
 import { addMonths, daysBetween } from "@/lib/dates";
 import { alignSeries } from "@/lib/forecast/aggregate";
 import { runProjection } from "@/lib/forecast/engine";
+import { formatCents } from "@/lib/money";
 import { createId } from "@/lib/utils";
-import type { Forecast, ScenarioDiff } from "@/types/forecast";
+import type { Currency, Forecast, ScenarioDiff } from "@/types/forecast";
 
 /**
  * Scenario modelling.
@@ -15,11 +16,21 @@ import type { Forecast, ScenarioDiff } from "@/types/forecast";
 
 export interface ScenarioPreset {
   id: string;
-  label: string;
-  description: string;
+  /**
+   * Takes the forecast currency because two of these name an amount.
+   *
+   * They used to hard-code "€1,500", which read as a euro figure on a dollar or
+   * yen forecast. Handing in the currency keeps the label honest.
+   */
+  label: (currency: Currency) => string;
+  description: (currency: Currency) => string;
   /** Returns a modified copy, or `null` when the forecast has nothing to change. */
   apply: (forecast: Forecast) => Forecast | null;
 }
+
+/** Roughly a month of a junior salary, in major units, uniform across currencies. */
+const HIRE_CENTS = 150_000;
+const LAPTOP_CENTS = 200_000;
 
 function copy(forecast: Forecast, label: string, changed: Partial<Forecast>): Forecast {
   return {
@@ -33,8 +44,8 @@ function copy(forecast: Forecast, label: string, changed: Partial<Forecast>): Fo
 export const SCENARIO_PRESETS: readonly ScenarioPreset[] = [
   {
     id: "client-30-days-late",
-    label: "Largest client pays 30 days late",
-    description: "Adds 30 days to the payment delay on the biggest expected invoice.",
+    label: () => "Largest client pays 30 days late",
+    description: () => "Adds 30 days to the payment delay on the biggest expected invoice.",
     apply: (forecast) => {
       const expected = forecast.invoices.filter((invoice) => invoice.status === "EXPECTED");
       if (expected.length === 0) return null;
@@ -54,8 +65,8 @@ export const SCENARIO_PRESETS: readonly ScenarioPreset[] = [
   },
   {
     id: "lose-monthly-client",
-    label: "Lose a monthly client",
-    description: "Switches off the largest monthly recurring income.",
+    label: () => "Lose a monthly client",
+    description: () => "Switches off the largest monthly recurring income.",
     apply: (forecast) => {
       const monthlyIncome = forecast.recurringItems.filter(
         (item) => item.direction === "INFLOW" && item.isActive && item.frequency === "MONTHLY",
@@ -75,46 +86,59 @@ export const SCENARIO_PRESETS: readonly ScenarioPreset[] = [
   },
   {
     id: "hire-1500-per-month",
-    label: "Hire someone for €1,500 per month",
-    description: "Adds a monthly salary outflow of 1,500 starting with the forecast.",
+    label: (currency) =>
+      `Hire someone for ${formatCents(HIRE_CENTS, currency)} per month`,
+    description: (currency) =>
+      `Adds a monthly salary outflow of ${formatCents(HIRE_CENTS, currency)} starting with the forecast.`,
     apply: (forecast) =>
-      copy(forecast, "Hire someone for €1,500 per month", {
-        recurringItems: [
-          ...forecast.recurringItems,
-          {
-            id: createId(),
-            name: "New hire",
-            direction: "OUTFLOW",
-            // 1,500 major units in minor units, written as an integer literal.
-            amountCents: 150_000,
-            frequency: "MONTHLY",
-            startDate: forecast.startDate,
-            category: "People",
-            note: "Scenario: added headcount",
-            isActive: true,
-          },
-        ],
-      }),
+      copy(
+        forecast,
+        `Hire someone for ${formatCents(HIRE_CENTS, forecast.currency)} per month`,
+        {
+          recurringItems: [
+            ...forecast.recurringItems,
+            {
+              id: createId(),
+              name: "New hire",
+              direction: "OUTFLOW",
+              // 1,500 major units in minor units, written as an integer literal.
+              amountCents: HIRE_CENTS,
+              frequency: "MONTHLY",
+              startDate: forecast.startDate,
+              // "Payroll", not the old "People": the taxonomy has no "People"
+              // bucket, so that item rendered without an emoji.
+              category: "Payroll",
+              note: "Scenario: added headcount",
+              isActive: true,
+            },
+          ],
+        },
+      ),
   },
   {
     id: "buy-2000-laptop",
-    label: "Buy a €2,000 laptop next month",
-    description: "Adds a one-off equipment purchase of 2,000 one month after the start date.",
+    label: (currency) => `Buy a ${formatCents(LAPTOP_CENTS, currency)} laptop next month`,
+    description: (currency) =>
+      `Adds a one-off equipment purchase of ${formatCents(LAPTOP_CENTS, currency)} one month after the start date.`,
     apply: (forecast) =>
-      copy(forecast, "Buy a €2,000 laptop next month", {
-        oneOffItems: [
-          ...forecast.oneOffItems,
-          {
-            id: createId(),
-            name: "New laptop",
-            direction: "OUTFLOW",
-            amountCents: 200_000,
-            date: addMonths(forecast.startDate, 1),
-            category: "Equipment",
-            note: "Scenario: one-off capital purchase",
-          },
-        ],
-      }),
+      copy(
+        forecast,
+        `Buy a ${formatCents(LAPTOP_CENTS, forecast.currency)} laptop next month`,
+        {
+          oneOffItems: [
+            ...forecast.oneOffItems,
+            {
+              id: createId(),
+              name: "New laptop",
+              direction: "OUTFLOW",
+              amountCents: LAPTOP_CENTS,
+              date: addMonths(forecast.startDate, 1),
+              category: "Equipment",
+              note: "Scenario: one-off capital purchase",
+            },
+          ],
+        },
+      ),
   },
 ];
 

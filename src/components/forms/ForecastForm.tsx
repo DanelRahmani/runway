@@ -17,9 +17,7 @@ import { todayIso } from "@/lib/dates";
 import { defaultForecastName, KIND_DESCRIPTIONS, KIND_LABELS } from "@/lib/sample";
 import { createId, cn } from "@/lib/utils";
 import { forecastSchema, toFieldErrors, type FieldErrors } from "@/lib/validation";
-import type { Currency, Forecast, ForecastKind, Horizon } from "@/types/forecast";
-
-const CURRENCIES: readonly Currency[] = ["EUR", "USD", "JPY"];
+import { CURRENCIES, type Currency, type Forecast, type ForecastKind, type Horizon } from "@/types/forecast";
 
 const KINDS: readonly ForecastKind[] = ["PERSONAL", "BUSINESS"];
 

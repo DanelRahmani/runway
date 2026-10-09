@@ -14,9 +14,25 @@ export const MINOR_UNITS_PER_MAJOR = 100;
 /** Guard rail for parsing: keeps `intPart * 100` inside Number.MAX_SAFE_INTEGER. */
 const MAX_INTEGER_DIGITS = 12;
 
-export const CURRENCIES: readonly Currency[] = ["EUR", "USD", "JPY"];
+/**
+ * Symbols stripped before parsing.
+ *
+ * Letter codes such as "CHF" or "kr" are deliberately not stripped: removing
+ * letters from an amount risks quietly changing what the user typed.
+ */
+const CURRENCY_SYMBOLS = /[€$¥£₣]/g;
 
-const CURRENCY_SYMBOLS = /[€$¥£]/g;
+/**
+ * Currencies conventionally written without decimals.
+ *
+ * They still store 100 minor units internally — only the display differs — so
+ * the arithmetic never needs a currency-specific branch.
+ */
+const ZERO_DECIMAL: ReadonlySet<Currency> = new Set<Currency>(["JPY"]);
+
+export function isZeroDecimal(currency: Currency): boolean {
+  return ZERO_DECIMAL.has(currency);
+}
 
 /** True when `value` is a whole number of minor units. */
 export function isIntegerCents(value: number): boolean {
@@ -241,7 +257,7 @@ export function centsToDecimalString(cents: number, currency: Currency): string 
   const major = Math.floor(magnitude / MINOR_UNITS_PER_MAJOR);
   const minor = magnitude % MINOR_UNITS_PER_MAJOR;
   const sign = negative ? "-" : "";
-  if (currency === "JPY") return `${sign}${major}`;
+  if (isZeroDecimal(currency)) return `${sign}${major}`;
   return `${sign}${major}.${String(minor).padStart(2, "0")}`;
 }
 
@@ -264,7 +280,7 @@ export interface FormatOptions {
 export function formatCents(cents: number, currency: Currency, options: FormatOptions = {}): string {
   assertIntegerCents(cents);
   const { locale, signed = false, bare = false } = options;
-  const zeroDecimal = currency === "JPY";
+  const zeroDecimal = isZeroDecimal(currency);
 
   const formatter = new Intl.NumberFormat(locale, {
     style: bare ? "decimal" : "currency",
@@ -288,14 +304,27 @@ export function formatCentsCompact(cents: number, currency: Currency, locale?: s
   }).format(cents / MINOR_UNITS_PER_MAJOR);
 }
 
-/** Plural-safe currency label, e.g. `EUR` → `euros`. Used in prose, not tables. */
+/**
+ * Plural-safe currency label, e.g. `EUR` → `euros`. Used in prose, not tables.
+ *
+ * A `Record` rather than a `switch` so an added currency is a compile error here
+ * rather than a silently missing case.
+ */
+const CURRENCY_NAMES: Record<Currency, string> = {
+  EUR: "euros",
+  USD: "US dollars",
+  GBP: "pounds sterling",
+  CHF: "Swiss francs",
+  SEK: "Swedish kronor",
+  NOK: "Norwegian kroner",
+  DKK: "Danish kroner",
+  PLN: "Polish zloty",
+  CZK: "Czech koruna",
+  CAD: "Canadian dollars",
+  AUD: "Australian dollars",
+  JPY: "yen",
+};
+
 export function currencyName(currency: Currency): string {
-  switch (currency) {
-    case "EUR":
-      return "euros";
-    case "USD":
-      return "US dollars";
-    case "JPY":
-      return "yen";
-  }
+  return CURRENCY_NAMES[currency];
 }

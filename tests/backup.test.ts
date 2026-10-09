@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { escapeCsvField, periodsToCsv, toCsv } from "@/lib/csv";
 import { aggregate } from "@/lib/forecast/aggregate";
 import { runProjection } from "@/lib/forecast/engine";
+import { CURRENCIES } from "@/types/forecast";
 import {
   BACKUP_SCHEMA_VERSION,
   buildBackup,
@@ -253,7 +254,9 @@ describe("parseBackup validation", () => {
   });
 
   it("rejects an unknown currency", () => {
-    const broken = { ...makeForecast(), currency: "GBP" };
+    // "XYZ" is not a real code. This test used to name GBP, which is now
+    // supported, so the example has to stay genuinely outside the list.
+    const broken = { ...makeForecast(), currency: "XYZ" };
     const result = parseBackup(
       JSON.stringify({
         schemaVersion: 1,
@@ -263,6 +266,21 @@ describe("parseBackup validation", () => {
       }),
     );
     expect(result.ok).toBe(false);
+  });
+
+  it("accepts every supported currency", () => {
+    for (const currency of CURRENCIES) {
+      const candidate = { ...makeForecast(), currency };
+      const result = parseBackup(
+        JSON.stringify({
+          schemaVersion: 1,
+          exportedAt: "2026-01-01T00:00:00.000Z",
+          app: "runway",
+          forecasts: [candidate],
+        }),
+      );
+      expect(result.ok, `${currency} should be a supported currency`).toBe(true);
+    }
   });
 
   it("ignores unknown extra keys rather than failing on them", () => {

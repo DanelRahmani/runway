@@ -2,12 +2,13 @@ import { z } from "zod";
 
 import { isValidIsoDate } from "@/lib/dates";
 import { MINOR_UNITS_PER_MAJOR } from "@/lib/money";
-import type {
-  Forecast,
-  Horizon,
-  Invoice,
-  OneOffItem,
-  RecurringItem,
+import {
+  CURRENCIES,
+  type Forecast,
+  type Horizon,
+  type Invoice,
+  type OneOffItem,
+  type RecurringItem,
 } from "@/types/forecast";
 
 /**
@@ -37,7 +38,7 @@ export const isoDateSchema = z
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Use the format YYYY-MM-DD")
   .refine(isValidIsoDate, "That date does not exist");
 
-export const currencySchema = z.enum(["EUR", "USD", "JPY"]);
+export const currencySchema = z.enum(CURRENCIES);
 export const forecastKindSchema = z.enum(["PERSONAL", "BUSINESS"]);
 export const directionSchema = z.enum(["INFLOW", "OUTFLOW"]);
 export const frequencySchema = z.enum(["WEEKLY", "BIWEEKLY", "MONTHLY", "QUARTERLY", "YEARLY"]);

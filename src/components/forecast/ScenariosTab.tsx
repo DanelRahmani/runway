@@ -84,11 +84,11 @@ export function ScenariosTab({ forecast, scenarios }: ScenariosTabProps) {
                 >
                   <span className="flex items-center gap-2 text-sm font-medium">
                     <SparklesIcon className="size-3.5" />
-                    {preset.label}
+                    {preset.label(forecast.currency)}
                   </span>
                   <span className="text-muted-foreground mt-1 block text-xs">
                     {applicable
-                      ? preset.description
+                      ? preset.description(forecast.currency)
                       : "Not applicable — nothing in this forecast matches that assumption."}
                   </span>
                 </button>

@@ -6,7 +6,30 @@
  * or passed around, so no floating-point rounding can creep into a balance.
  */
 
-export type Currency = "EUR" | "USD" | "JPY";
+/**
+ * Supported currencies.
+ *
+ * Declared once as a tuple so the union type, the picker and the validator all
+ * derive from the same list — adding a currency here is the only edit needed.
+ * (It previously lived in three places and would have drifted the moment one
+ * was changed.)
+ */
+export const CURRENCIES = [
+  "EUR",
+  "USD",
+  "GBP",
+  "CHF",
+  "SEK",
+  "NOK",
+  "DKK",
+  "PLN",
+  "CZK",
+  "CAD",
+  "AUD",
+  "JPY",
+] as const;
+
+export type Currency = (typeof CURRENCIES)[number];
 
 export type Direction = "INFLOW" | "OUTFLOW";
 
