@@ -1,5 +1,3 @@
-import type { Currency } from "@/types/forecast";
-
 /**
  * Chart helpers.
  *
@@ -41,7 +39,12 @@ export function paddedDomain(bounds: SeriesBounds): [number, number] {
   return [min - pad, max + pad];
 }
 
-/** Stable, themeable colour pair. Kept as literals because Recharts needs real values. */
+/**
+ * Stable colour pair for the charts.
+ *
+ * These read the same CSS custom properties the rest of the app uses, so the
+ * charts follow the theme automatically instead of hard-coding a palette.
+ */
 export const CHART_COLORS = {
   positive: "var(--positive)",
   negative: "var(--negative)",
@@ -50,7 +53,3 @@ export const CHART_COLORS = {
   grid: "var(--border)",
   muted: "var(--muted-foreground)",
 } as const;
-
-export function currencyAxisLabel(currency: Currency): string {
-  return currency;
-}

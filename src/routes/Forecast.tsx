@@ -138,7 +138,9 @@ export function ForecastPage() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex flex-col gap-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{forecast.name}</h1>
+              <h1 className="font-display text-2xl leading-tight tracking-tight sm:text-3xl">
+                {forecast.name}
+              </h1>
               <Badge variant="muted">{forecast.currency}</Badge>
               <Badge variant="muted">{HORIZON_LABELS[forecast.horizon]}</Badge>
               {forecast.baseForecastId !== undefined ? (

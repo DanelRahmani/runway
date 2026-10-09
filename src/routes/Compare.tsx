@@ -72,8 +72,8 @@ export function ComparePage() {
       }
     >
       <header className="flex flex-col gap-1">
-        <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight sm:text-2xl">
-          <GitCompareArrowsIcon className="size-5" />
+        <h1 className="font-display flex items-center gap-3 text-2xl leading-tight tracking-tight sm:text-3xl">
+          <GitCompareArrowsIcon className="size-5 sm:size-6" />
           Compare forecasts
         </h1>
         <p className="text-muted-foreground text-sm">

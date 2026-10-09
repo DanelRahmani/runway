@@ -23,21 +23,29 @@ interface KpiCardProps {
 export function KpiCard({ label, value, hint, tone = "neutral", icon }: KpiCardProps) {
   return (
     <Card className="gap-0">
-      <CardContent className="flex flex-col gap-1 pt-5">
-        <div className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
+      <CardContent className="flex flex-col gap-1.5 pt-5">
+        {/* The engraved label register: mono, small, letterspaced, uppercase. */}
+        <div className="text-muted-foreground flex items-center gap-1.5 font-mono text-[0.6875rem] font-medium tracking-wide uppercase">
           {icon}
           {label}
         </div>
+        {/*
+         * Figures use the display face. Geist Mono is capped at label sizes in
+         * this design language, so a large number belongs to Bodoni — which is
+         * also the more editorial answer for a hero figure.
+         */}
         <p
           className={cn(
-            "tnum text-lg font-semibold tracking-tight break-all sm:text-xl",
+            "font-display text-2xl leading-none break-all sm:text-3xl",
             tone === "positive" && "text-positive",
             tone === "negative" && "text-negative",
           )}
         >
           {value}
         </p>
-        {hint !== undefined ? <p className="text-muted-foreground text-xs">{hint}</p> : null}
+        {hint !== undefined ? (
+          <p className="text-muted-foreground text-xs leading-relaxed">{hint}</p>
+        ) : null}
       </CardContent>
     </Card>
   );

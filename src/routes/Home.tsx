@@ -33,7 +33,7 @@ import { Field } from "@/components/forms/Field";
 import { formatIsoDate, HORIZON_LABELS } from "@/lib/dates";
 import { runProjection } from "@/lib/forecast/engine";
 import { formatCents } from "@/lib/money";
-import { createSampleForecast } from "@/lib/sample";
+import { createStarterForecast, KIND_DESCRIPTIONS, KIND_LABELS } from "@/lib/sample";
 import {
   createForecast,
   deleteForecast,
@@ -45,39 +45,82 @@ import {
   type StoredForecast,
 } from "@/lib/storage/forecasts";
 import { cn } from "@/lib/utils";
+import type { ForecastKind } from "@/types/forecast";
+
+type KindFilter = "ALL" | ForecastKind;
+
+const KIND_FILTERS: ReadonlyArray<{ value: KindFilter; label: string }> = [
+  { value: "ALL", label: "All" },
+  { value: "PERSONAL", label: "Personal" },
+  { value: "BUSINESS", label: "Business" },
+];
 
 export function Home() {
   const { forecasts, loading } = useForecasts();
   const navigate = useNavigate();
 
-  const [creating, setCreating] = useState(false);
+  /** `null` when closed; otherwise the kind the form should pre-select. */
+  const [creating, setCreating] = useState<ForecastKind | null>(null);
   const [renaming, setRenaming] = useState<StoredForecast | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [renameError, setRenameError] = useState<string | undefined>(undefined);
   const [pendingDelete, setPendingDelete] = useState<StoredForecast | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [kindFilter, setKindFilter] = useState<KindFilter>("ALL");
 
-  const active = forecasts.filter((forecast) => forecast.archived !== true);
   const archived = forecasts.filter((forecast) => forecast.archived === true);
-  const visible = showArchived ? archived : active;
+  const active = forecasts.filter((forecast) => forecast.archived !== true);
+  const inView = showArchived ? archived : active;
+  const visible =
+    kindFilter === "ALL" ? inView : inView.filter((forecast) => forecast.forecastKind === kindFilter);
+
+  const startFromStarter = (kind: ForecastKind): void => {
+    void saveForecast(createStarterForecast(kind)).then((created) => {
+      navigate(`/forecast/${created.id}`);
+    });
+  };
 
   return (
     <AppShell
       actions={
-        <Button size="sm" onClick={() => setCreating(true)}>
+        <Button size="sm" onClick={() => setCreating("PERSONAL")}>
           <PlusIcon />
           New forecast
         </Button>
       }
     >
-      <LandingHero onCreate={() => setCreating(true)} />
+      <LandingHero onCreate={(kind) => setCreating(kind)} onStarter={startFromStarter} />
 
-      <section aria-labelledby="forecasts-heading" className="flex flex-col gap-4">
+      <section aria-labelledby="forecasts-heading" className="seam flex flex-col gap-4 pt-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 id="forecasts-heading" className="text-lg font-semibold tracking-tight">
+          <h2 id="forecasts-heading" className="font-display text-2xl tracking-tight">
             Your forecasts
           </h2>
-          <div className="flex items-center gap-1">
+          <div className="flex flex-wrap items-center gap-2">
+            {!showArchived && active.length > 0 ? (
+              <div
+                className="bg-muted inline-flex items-center gap-0.5 rounded-lg p-0.5"
+                role="group"
+                aria-label="Filter forecasts by kind"
+              >
+                {KIND_FILTERS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    aria-pressed={kindFilter === option.value}
+                    onClick={() => setKindFilter(option.value)}
+                    className={cn(
+                      "focus-visible:ring-ring rounded-md px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none",
+                      kindFilter === option.value
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
             {archived.length > 0 ? (
               <Button variant="ghost" size="sm" onClick={() => setShowArchived((value) => !value)}>
                 <ArchiveIcon />
@@ -92,12 +135,9 @@ export function Home() {
         ) : visible.length === 0 ? (
           <EmptyForecasts
             archived={showArchived}
-            onCreate={() => setCreating(true)}
-            onSample={() => {
-              void saveForecast(createSampleForecast()).then((created) => {
-                navigate(`/forecast/${created.id}`);
-              });
-            }}
+            filtered={kindFilter !== "ALL" && inView.length > 0}
+            onCreate={() => setCreating("PERSONAL")}
+            onStarter={startFromStarter}
           />
         ) : (
           <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -117,12 +157,14 @@ export function Home() {
         )}
       </section>
 
-      {creating ? (
+      {creating !== null ? (
         <ForecastForm
-          onClose={() => setCreating(false)}
+          initialKind={creating}
+          onClose={() => setCreating(null)}
           onSubmit={(values: ForecastFormValues) => {
             void createForecast({
               name: values.name,
+              forecastKind: values.forecastKind,
               currency: values.currency,
               startingBalanceCents: values.startingBalanceCents,
               startDate: values.startDate,
@@ -190,7 +232,13 @@ export function Home() {
   );
 }
 
-function LandingHero({ onCreate }: { onCreate: () => void }) {
+function LandingHero({
+  onCreate,
+  onStarter,
+}: {
+  onCreate: (kind: ForecastKind) => void;
+  onStarter: (kind: ForecastKind) => void;
+}) {
   return (
     <section className="flex flex-col gap-6 pt-2 sm:pt-6">
       <div className="flex max-w-2xl flex-col gap-3">
@@ -198,23 +246,28 @@ function LandingHero({ onCreate }: { onCreate: () => void }) {
           <SparklesIcon />
           Private by design — nothing leaves your browser
         </Badge>
-        <h1 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+        <h1 className="font-display text-4xl leading-[1.05] tracking-tight text-balance sm:text-6xl">
           Know when your cash runs out.
         </h1>
-        <p className="text-muted-foreground text-base leading-relaxed">
+        <p className="text-muted-foreground max-w-[68ch] text-base leading-relaxed sm:text-lg">
           Runway turns your income, expenses and expected invoices into a day-by-day cash-flow
           forecast — so you can see the shortfall coming, and test what happens when an assumption
           changes.
         </p>
-        <div className="flex flex-wrap gap-2 pt-1">
-          <Button size="lg" onClick={onCreate}>
-            Create a forecast
-            <ArrowRightIcon />
-          </Button>
-          <Button size="lg" variant="outline" asChild>
-            <a href="#forecasts-heading">See my forecasts</a>
-          </Button>
-        </div>
+      </div>
+
+      {/* Two entry points, because a household and a business are not the same forecast. */}
+      <div className="grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-2">
+        <KindStartCard
+          kind="PERSONAL"
+          onCreate={onCreate}
+          onStarter={onStarter}
+        />
+        <KindStartCard
+          kind="BUSINESS"
+          onCreate={onCreate}
+          onStarter={onStarter}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -250,6 +303,40 @@ function LandingHero({ onCreate }: { onCreate: () => void }) {
         </ol>
       </div>
     </section>
+  );
+}
+
+/** The two creation paths: a blank forecast, or one pre-filled with starter items. */
+function KindStartCard({
+  kind,
+  onCreate,
+  onStarter,
+}: {
+  kind: ForecastKind;
+  onCreate: (kind: ForecastKind) => void;
+  onStarter: (kind: ForecastKind) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border p-4">
+      <div className="flex flex-col gap-1">
+        <h2 className="font-display text-xl leading-tight tracking-tight">
+          {KIND_LABELS[kind]} forecast
+        </h2>
+        <p className="text-muted-foreground text-xs leading-relaxed">
+          {KIND_DESCRIPTIONS[kind]}
+        </p>
+      </div>
+      <div className="mt-auto flex flex-wrap gap-2">
+        <Button size="sm" onClick={() => onCreate(kind)}>
+          Start from scratch
+          <ArrowRightIcon />
+        </Button>
+        <Button size="sm" variant="outline" onClick={() => onStarter(kind)}>
+          <FileJsonIcon />
+          Use {KIND_LABELS[kind].toLowerCase()} starter
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -324,7 +411,12 @@ function ForecastCard({
               {formatIsoDate(forecast.startDate)}
             </CardDescription>
           </div>
-          {forecast.baseForecastId !== undefined ? <Badge variant="default">Scenario</Badge> : null}
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            {forecast.forecastKind !== undefined ? (
+              <Badge variant="muted">{KIND_LABELS[forecast.forecastKind]}</Badge>
+            ) : null}
+            {forecast.baseForecastId !== undefined ? <Badge variant="default">Scenario</Badge> : null}
+          </div>
         </CardHeader>
 
         <CardContent className="flex flex-col gap-3 pt-3">
@@ -402,12 +494,15 @@ function ForecastCard({
 
 function EmptyForecasts({
   archived,
+  filtered,
   onCreate,
-  onSample,
+  onStarter,
 }: {
   archived: boolean;
+  /** True when forecasts exist but the active kind filter hid them all. */
+  filtered: boolean;
   onCreate: () => void;
-  onSample: () => void;
+  onStarter: (kind: ForecastKind) => void;
 }) {
   if (archived) {
     return (
@@ -417,23 +512,36 @@ function EmptyForecasts({
     );
   }
 
+  if (filtered) {
+    return (
+      <p className="text-muted-foreground rounded-xl border border-dashed p-6 text-sm">
+        No forecasts of that kind. Switch the filter back to “All”, or create one below.
+      </p>
+    );
+  }
+
   return (
     <div className="flex flex-col items-start gap-4 rounded-xl border border-dashed p-6">
       <div className="flex flex-col gap-1">
         <p className="text-sm font-medium">No forecasts yet</p>
-        <p className="text-muted-foreground text-xs leading-relaxed">
-          Start from scratch, or load a sample freelance cash flow and change the numbers to match
-          your own. A sample is a normal forecast — delete it whenever you like.
+        <p className="text-muted-foreground max-w-prose text-xs leading-relaxed">
+          Start with a blank personal or business forecast, or load a starter with typical items to
+          edit. Starter amounts are placeholders, and a starter is an ordinary forecast — delete it
+          whenever you like.
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
         <Button size="sm" onClick={onCreate}>
           <PlusIcon />
-          Create a forecast
+          Blank forecast
         </Button>
-        <Button size="sm" variant="outline" onClick={onSample}>
+        <Button size="sm" variant="outline" onClick={() => onStarter("PERSONAL")}>
           <FileJsonIcon />
-          Try the sample
+          Personal starter
+        </Button>
+        <Button size="sm" variant="outline" onClick={() => onStarter("BUSINESS")}>
+          <FileJsonIcon />
+          Business starter
         </Button>
       </div>
     </div>

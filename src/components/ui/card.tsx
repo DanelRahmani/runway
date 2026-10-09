@@ -7,7 +7,9 @@ export function Card({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card"
       className={cn(
-        "bg-card text-card-foreground flex flex-col rounded-xl border shadow-sm",
+        // Flat by design: a hairline, no shadow, no nesting. Depth is faked with
+        // a tinted seam rather than elevation.
+        "bg-card text-card-foreground lift hover:border-border-strong flex flex-col rounded-lg border",
         className,
       )}
       {...props}

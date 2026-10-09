@@ -133,6 +133,54 @@ describe("JSON export/import round trip", () => {
   });
 });
 
+/* ------------------------------------------------- personal / business kind -- */
+
+describe("personal and business forecasts", () => {
+  it("round-trips the forecast kind", () => {
+    for (const kind of ["PERSONAL", "BUSINESS"] as const) {
+      const original = makeForecast({ forecastKind: kind });
+      const parsed = parseBackup(serializeBackup(buildBackup([original])));
+
+      expect(parsed.ok).toBe(true);
+      if (!parsed.ok) return;
+      expect(parsed.backup.forecasts[0]?.forecastKind).toBe(kind);
+    }
+  });
+
+  it("accepts a backup written before kinds existed", () => {
+    // Simulates an export from a build that had no `forecastKind`.
+    const legacy = makeForecast();
+    delete (legacy as { forecastKind?: unknown }).forecastKind;
+
+    const result = parseBackup(
+      JSON.stringify({
+        schemaVersion: 1,
+        exportedAt: "2026-01-01T00:00:00.000Z",
+        app: "runway",
+        forecasts: [legacy],
+      }),
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.backup.forecasts[0]?.forecastKind).toBeUndefined();
+  });
+
+  it("rejects an unrecognised kind rather than silently coercing it", () => {
+    const broken = { ...makeForecast(), forecastKind: "CHARITY" };
+    const result = parseBackup(
+      JSON.stringify({
+        schemaVersion: 1,
+        exportedAt: "2026-01-01T00:00:00.000Z",
+        app: "runway",
+        forecasts: [broken],
+      }),
+    );
+
+    expect(result.ok).toBe(false);
+  });
+});
+
 /* --------------------------------------------------------------- parsing -- */
 
 describe("parseBackup validation", () => {

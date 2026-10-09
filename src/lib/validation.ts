@@ -25,6 +25,7 @@ export const isoDateSchema = z
   .refine(isValidIsoDate, "That date does not exist");
 
 export const currencySchema = z.enum(["EUR", "USD", "JPY"]);
+export const forecastKindSchema = z.enum(["PERSONAL", "BUSINESS"]);
 export const directionSchema = z.enum(["INFLOW", "OUTFLOW"]);
 export const frequencySchema = z.enum(["WEEKLY", "BIWEEKLY", "MONTHLY", "QUARTERLY", "YEARLY"]);
 export const horizonSchema = z.enum(["THIRTEEN_WEEKS", "SIX_MONTHS", "TWELVE_MONTHS"]);
@@ -93,6 +94,8 @@ export const invoiceSchema = z.object({
 export const forecastSchema = z.object({
   id: z.string().min(1),
   name: requiredText(80, "Give your forecast a name"),
+  // Optional so a backup exported before kinds existed still imports cleanly.
+  forecastKind: forecastKindSchema.optional(),
   currency: currencySchema,
   startingBalanceCents: amountCentsSchema,
   startDate: isoDateSchema,

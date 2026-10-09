@@ -12,6 +12,8 @@ import {
   parseDecimalToCents,
   sumCents,
 } from "@/lib/money";
+import { createStarterForecast, defaultForecastName } from "@/lib/sample";
+import { validateForecast } from "@/lib/validation";
 import type { Forecast, Frequency, RecurringItem } from "@/types/forecast";
 
 function makeForecast(overrides: Partial<Forecast> = {}): Forecast {
@@ -670,6 +672,74 @@ describe("aggregation", () => {
   it("returns one period per day at daily granularity", () => {
     const projection = runProjection(makeForecast());
     expect(aggregate(projection.days, "daily")).toHaveLength(projection.days.length);
+  });
+});
+
+/* ------------------------------------------------- personal / business kind -- */
+
+describe("starter forecasts", () => {
+  const start = "2026-01-01";
+
+  it("labels each starter with its kind and a matching default name", () => {
+    const personal = createStarterForecast("PERSONAL", start);
+    const business = createStarterForecast("BUSINESS", start);
+
+    expect(personal.forecastKind).toBe("PERSONAL");
+    expect(business.forecastKind).toBe("BUSINESS");
+    expect(personal.name).not.toBe(business.name);
+    expect(defaultForecastName("PERSONAL")).toBe(personal.name);
+    expect(defaultForecastName("BUSINESS")).toBe(business.name);
+  });
+
+  it("gives the personal starter no invoices and the business starter some", () => {
+    // A household does not raise client invoices; that is the clearest split.
+    expect(createStarterForecast("PERSONAL", start).invoices).toHaveLength(0);
+    expect(createStarterForecast("BUSINESS", start).invoices.length).toBeGreaterThan(0);
+  });
+
+  it("gives the personal starter a brief dip that it recovers from", () => {
+    const { summary } = runProjection(createStarterForecast("PERSONAL", start));
+
+    // A car repair takes a thin buffer under for a fortnight, then the salary
+    // arrives and clears it. Pinned so a tweak to the starter cannot quietly
+    // remove the very thing the product is for.
+    expect(summary.cashOutDate).toBe("2026-03-19");
+    expect(summary.minimumBalanceCents).toBe(-14_000);
+    expect(summary.shortfallDays).toBe(13);
+    expect(summary.endingBalanceCents).toBeGreaterThan(0);
+    expect(summary.endingBalanceCents).toBeGreaterThan(summary.minimumBalanceCents);
+  });
+
+  it("gives the business starter a permanent shortfall, which is the honest outcome", () => {
+    const { summary } = runProjection(createStarterForecast("BUSINESS", start));
+
+    // The under-provisioned tax bill lands in July and the balance never
+    // recovers inside the horizon.
+    expect(summary.cashOutDate).toBe("2026-07-30");
+    expect(summary.minimumBalanceCents).toBeLessThan(0);
+    expect(summary.endingBalanceCents).toBeLessThan(0);
+    expect(summary.shortfallDays).toBeGreaterThan(100);
+  });
+
+  it("uses only integer cents and valid dates in every starter item", () => {
+    for (const kind of ["PERSONAL", "BUSINESS"] as const) {
+      const forecast = createStarterForecast(kind, start);
+      expect(() => runProjection(forecast)).not.toThrow();
+
+      for (const item of [...forecast.recurringItems, ...forecast.oneOffItems]) {
+        expect(Number.isInteger(item.amountCents)).toBe(true);
+        expect(item.amountCents).toBeGreaterThan(0);
+      }
+      for (const invoice of forecast.invoices) {
+        expect(Number.isInteger(invoice.amountCents)).toBe(true);
+        expect(Number.isInteger(invoice.paymentDelayDays)).toBe(true);
+      }
+    }
+  });
+
+  it("validates against the persisted schema", () => {
+    expect(validateForecast(createStarterForecast("PERSONAL", start)).ok).toBe(true);
+    expect(validateForecast(createStarterForecast("BUSINESS", start)).ok).toBe(true);
   });
 });
 

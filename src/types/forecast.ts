@@ -18,6 +18,15 @@ export type InvoiceStatus = "EXPECTED" | "PAID" | "CANCELLED";
 
 export type InvoiceRecurrence = "NONE" | "MONTHLY" | "QUARTERLY";
 
+/**
+ * Whether a forecast describes personal or business money.
+ *
+ * Purely a label that shapes the defaults, the starter items and how the list
+ * is grouped — it changes nothing about the maths. Optional because forecasts
+ * exported before this field existed must still import.
+ */
+export type ForecastKind = "PERSONAL" | "BUSINESS";
+
 /** Calendar date as `YYYY-MM-DD`. Always interpreted as a wall-clock date, never as a UTC instant. */
 export type IsoDate = string;
 
@@ -58,6 +67,11 @@ export interface Invoice {
 export interface Forecast {
   id: string;
   name: string;
+  /**
+   * Personal or business. Undefined means unspecified, which is how forecasts
+   * created before this field existed (or imported from an old export) appear.
+   */
+  forecastKind?: ForecastKind;
   currency: Currency;
   startingBalanceCents: number;
   startDate: IsoDate;

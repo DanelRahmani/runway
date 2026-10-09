@@ -17,6 +17,27 @@ cash run out?**
 
 ## Features
 
+### Two kinds of forecast
+
+Runway starts by asking *what* you are forecasting, because a household and a business do not keep
+the same books:
+
+| | Personal | Business |
+| --- | --- | --- |
+| Starter items | Salary, rent, groceries, utilities, transport, savings | Retainer, office rent, software, accountant, tax provision, insurance |
+| Invoices | none — households do not raise them | expected client invoices with payment delays |
+| Typical squeeze | an unplanned repair against a thin buffer | an under-provisioned tax bill landing mid-year |
+
+The kind is a label that shapes defaults and grouping — it changes nothing about the maths. You
+choose it when you create a forecast, can switch it afterwards from the **Assumptions** tab, filter
+by it on the home page, and it survives export and import. Forecasts created before the field
+existed simply show no kind.
+
+Each kind has a **starter**: a full, editable forecast with typical items and clearly-labelled
+placeholder amounts. Both starters deliberately contain a shortfall so the tool demonstrates the
+thing it is for — the personal one dips for a fortnight and recovers, the business one runs out in
+July and stays out.
+
 ### Forecast setup
 - Name, starting balance, start date and notes
 - Currency: **EUR** (default), **USD**, **JPY**
@@ -284,6 +305,63 @@ tests/
 ---
 
 ## Design notes
+
+**Visual language.** Runway implements `DESIGN.md` from
+[danelrahmani.com](https://danelrahmani.com): warm editorial minimalism with an atelier thread —
+creme cloth, maroon thread, engraved-label typography.
+
+| Token | Light | Dark | Role |
+| --- | --- | --- | --- |
+| `bg` | `#FDFBF6` creme | `#0F090E` aubergine-black | page ground |
+| `ink` | `#1C1917` stone-900 | `#F4EFEA` warm white | primary text |
+| `muted` | `#57534E` stone-600 | `#A8A29E` stone-400 | secondary text |
+| `accent` | `#4A0E0E` maroon | `#D43D55` raspberry | thread, links, seams, emphasis |
+| `accent-hover` | `#6B1515` | `#E8566A` | hover states |
+| `seam` | `rgba(74,14,14,.15)` | `rgba(212,61,85,.18)` | hairline rules |
+
+Hairlines are tinted toward the accent rather than neutral grey, and shadows are maroon-tinted in
+light mode and raspberry-tinted in dark. Cards are flat — depth is a seam and a background tint,
+never elevation, and never a uniform scale on hover.
+
+**Typography.** Three registers, each with one job:
+
+| Register | Face | Used for |
+| --- | --- | --- |
+| Display | **Bodoni Moda** | page titles, section headings, the wordmark, and hero figures |
+| Body / UI | **Geist Sans** | everything read as prose or used as a control |
+| Label | **Geist Mono** | dates, tags, captions, table figures — capped at 0.8125rem |
+
+Geist Mono is the "woven label" register and is never body copy or a display size, which is why the
+large figures in the KPI cards and the hero use Bodoni instead. All three faces are self-hosted via
+`@fontsource-variable`, so nothing is fetched from a CDN and the app still renders correctly offline.
+
+**Two deliberate departures from the source palette**, both documented in `src/index.css`:
+
+1. **The accent is the alarm hue.** In this palette maroon and raspberry are both the identity thread
+   and the colour of blood, so the accent carries links, seams, the wordmark *and* negative money.
+   Primary buttons therefore stay ink rather than accent, which keeps the solid accent fill reserved
+   for destructive actions and stops a delete button reading as the main call to action.
+2. **A sage green is introduced for gains** (`#3D6B4A` light, `#82B892` dark). The source palette has
+   no "healthy" hue, and without one inflow and outflow would be indistinguishable.
+
+Contrast was checked against WCAG AA at each step: ink on creme is 16.9:1, muted is 7.4:1, maroon on
+creme is 14.9:1. Raspberry `#D43D55` measures 4.3:1 on aubergine-black — just under AA for body text
+— so dark mode uses the lighter `#E8566A` (5.6:1) for text while fills, rings and seams keep the
+specified raspberry.
+
+**Motion.** Low energy — "barely seen, perfectly finished". Transitions are 200ms `ease-out`
+(cubic-bezier 0.22, 1, 0.36, 1), links draw an accent underline from the left, and cards respond with
+a tint and a hairline rather than a transform. There are no springs and no bounce. Every animation has
+a `prefers-reduced-motion` alternative.
+
+> This is implemented with CSS transitions rather than framer-motion. The brief calls for motion that
+> is barely seen, which CSS covers without shipping a runtime animation library; if entrances or
+> orchestrated sequences are added later, framer-motion is the intended tool.
+
+**Theme.** Light, dark and "match system" are selectable from the header. The preference is stored in
+`localStorage` under `runway.theme`, and a small inline script in `index.html` applies it before first
+paint so there is no flash of the wrong theme. In "system" mode the app follows the OS and keeps
+following it if the setting changes mid-session.
 
 **Money is never a float.** Every amount is stored and calculated as an integer number of minor
 units. Parsing goes through digit-wise logic rather than `Number(x) * 100`, and

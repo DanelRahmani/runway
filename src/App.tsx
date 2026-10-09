@@ -76,7 +76,7 @@ function NotFound() {
   return (
     <AppShell>
       <div className="flex flex-col items-start gap-3 py-16">
-        <h1 className="text-2xl font-semibold tracking-tight">That page does not exist.</h1>
+        <h1 className="font-display text-3xl tracking-tight">That page does not exist.</h1>
         <p className="text-muted-foreground text-sm">
           The link may be out of date, or a forecast it pointed at has been deleted.
         </p>

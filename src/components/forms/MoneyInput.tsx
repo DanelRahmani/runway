@@ -58,7 +58,12 @@ export function MoneyInput({
         disabled={disabled}
         aria-invalid={aria["aria-invalid"] ?? (invalid ? true : undefined)}
         aria-describedby={aria["aria-describedby"]}
-        className={cn("tnum pr-12 text-right", className)}
+        /*
+         * Tabular figures in the body face, not Geist Mono: mono is the label
+         * register in this design language, and a 13px control would also make
+         * iOS zoom the viewport on focus.
+         */
+        className={cn("tabular-nums pr-12 text-right", className)}
         onChange={(event) => {
           const raw = event.target.value;
           const parsed = parseDecimalToCents(raw);

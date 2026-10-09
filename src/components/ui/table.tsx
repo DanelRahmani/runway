@@ -17,7 +17,8 @@ export function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
     <table
       data-slot="table"
-      className={cn("w-full caption-bottom border-collapse text-sm", className)}
+      /* The ledger register: 13px so mono figures stay inside the label size. */
+      className={cn("w-full caption-bottom border-collapse text-[0.8125rem]", className)}
       {...props}
     />
   );

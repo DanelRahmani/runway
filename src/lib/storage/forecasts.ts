@@ -10,7 +10,7 @@ import {
   type StoredForecast,
 } from "@/lib/storage/db";
 import { createId } from "@/lib/utils";
-import type { Currency, Forecast, Horizon } from "@/types/forecast";
+import type { Currency, Forecast, ForecastKind, Horizon } from "@/types/forecast";
 
 // Re-exported so UI code can name the persisted shape without importing db.ts.
 export type { StorageStatus, StoredForecast };
@@ -129,6 +129,7 @@ export async function saveForecasts(forecasts: Forecast[]): Promise<void> {
 
 export interface CreateForecastInput {
   name: string;
+  forecastKind?: ForecastKind;
   currency?: Currency;
   startingBalanceCents?: number;
   startDate: string;
@@ -144,6 +145,7 @@ export function buildForecast(input: CreateForecastInput): Forecast {
   return {
     id: createId(),
     name: input.name.trim(),
+    forecastKind: input.forecastKind,
     currency: input.currency ?? "EUR",
     startingBalanceCents: input.startingBalanceCents ?? 0,
     startDate: input.startDate,

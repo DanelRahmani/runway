@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatIsoDate, HORIZON_LABELS, horizonEndDate } from "@/lib/dates";
 import { currencyName, formatCents } from "@/lib/money";
+import { KIND_LABELS } from "@/lib/sample";
 import type { Currency, Forecast } from "@/types/forecast";
 
 interface AssumptionsTabProps {
@@ -56,6 +57,13 @@ export function AssumptionsTab({ forecast, update }: AssumptionsTabProps) {
             <Row label="Horizon">
               {HORIZON_LABELS[forecast.horizon]}{" "}
               <span className="text-muted-foreground">to {formatIsoDate(endDate)}</span>
+            </Row>
+            <Row label="Kind">
+              {forecast.forecastKind === undefined ? (
+                <span className="text-muted-foreground">Not specified</span>
+              ) : (
+                <Badge variant="muted">{KIND_LABELS[forecast.forecastKind]}</Badge>
+              )}
             </Row>
             <Row label="Type">
               {forecast.baseForecastId === undefined ? (
@@ -123,6 +131,7 @@ export function AssumptionsTab({ forecast, update }: AssumptionsTabProps) {
             update((current) => ({
               ...current,
               name: values.name.trim(),
+              forecastKind: values.forecastKind,
               currency: values.currency as Currency,
               startingBalanceCents: values.startingBalanceCents,
               startDate: values.startDate,

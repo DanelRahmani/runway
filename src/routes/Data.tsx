@@ -25,7 +25,9 @@ export function DataPage() {
       }
     >
       <header className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Your data</h1>
+        <h1 className="font-display text-2xl leading-tight tracking-tight sm:text-3xl">
+          Your data
+        </h1>
         <p className="text-muted-foreground text-sm">
           Export a backup, restore one, or download a projection as CSV. Everything stays on this
           device until you choose to export it.

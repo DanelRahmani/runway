@@ -14,11 +14,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { todayIso } from "@/lib/dates";
-import { createId } from "@/lib/utils";
+import { defaultForecastName, KIND_DESCRIPTIONS, KIND_LABELS } from "@/lib/sample";
+import { createId, cn } from "@/lib/utils";
 import { forecastSchema, toFieldErrors, type FieldErrors } from "@/lib/validation";
-import type { Currency, Forecast, Horizon } from "@/types/forecast";
+import type { Currency, Forecast, ForecastKind, Horizon } from "@/types/forecast";
 
 const CURRENCIES: readonly Currency[] = ["EUR", "USD", "JPY"];
+
+const KINDS: readonly ForecastKind[] = ["PERSONAL", "BUSINESS"];
 
 const HORIZONS: ReadonlyArray<{ value: Horizon; label: string }> = [
   { value: "THIRTEEN_WEEKS", label: "13 weeks" },
@@ -28,6 +31,7 @@ const HORIZONS: ReadonlyArray<{ value: Horizon; label: string }> = [
 
 export interface ForecastFormValues {
   name: string;
+  forecastKind: ForecastKind;
   currency: Currency;
   startingBalanceCents: number;
   startDate: string;
@@ -39,20 +43,48 @@ interface ForecastFormProps {
   onClose: () => void;
   /** Pass an existing forecast to edit its setup. */
   forecast?: Forecast | null;
+  /** Pre-selects personal or business, depending on which button opened the form. */
+  initialKind?: ForecastKind;
   onSubmit: (values: ForecastFormValues) => void;
 }
 
 /** Create or edit a forecast's core assumptions. Mounted only while open. */
-export function ForecastForm({ onClose, forecast = null, onSubmit }: ForecastFormProps) {
-  const [values, setValues] = useState<ForecastFormValues>(() => ({
-    name: forecast?.name ?? "",
-    currency: forecast?.currency ?? "EUR",
-    startingBalanceCents: forecast?.startingBalanceCents ?? 0,
-    startDate: forecast?.startDate ?? todayIso(),
-    horizon: forecast?.horizon ?? "THIRTEEN_WEEKS",
-    notes: forecast?.notes ?? "",
-  }));
+export function ForecastForm({
+  onClose,
+  forecast = null,
+  initialKind,
+  onSubmit,
+}: ForecastFormProps) {
+  const [values, setValues] = useState<ForecastFormValues>(() => {
+    const kind = forecast?.forecastKind ?? initialKind ?? "PERSONAL";
+    return {
+      name: forecast?.name ?? defaultForecastName(kind),
+      forecastKind: kind,
+      currency: forecast?.currency ?? "EUR",
+      startingBalanceCents: forecast?.startingBalanceCents ?? 0,
+      startDate: forecast?.startDate ?? todayIso(),
+      horizon: forecast?.horizon ?? "THIRTEEN_WEEKS",
+      notes: forecast?.notes ?? "",
+    };
+  });
   const [errors, setErrors] = useState<FieldErrors>({});
+
+  /**
+   * Switching kind renames the forecast, but only while the name is still a
+   * generated default — a name the user typed is never overwritten.
+   */
+  const handleKindChange = (kind: ForecastKind): void => {
+    setValues((current) => {
+      const isGenerated =
+        current.name.trim() === "" ||
+        KINDS.some((candidate) => current.name.trim() === defaultForecastName(candidate));
+      return {
+        ...current,
+        forecastKind: kind,
+        name: isGenerated ? defaultForecastName(kind) : current.name,
+      };
+    });
+  };
 
   const handleSubmit = (event: React.FormEvent): void => {
     event.preventDefault();
@@ -62,6 +94,7 @@ export function ForecastForm({ onClose, forecast = null, onSubmit }: ForecastFor
     const candidate: Forecast = {
       id: forecast?.id ?? createId(),
       name: values.name,
+      forecastKind: values.forecastKind,
       currency: values.currency,
       startingBalanceCents: values.startingBalanceCents,
       startDate: values.startDate,
@@ -100,6 +133,54 @@ export function ForecastForm({ onClose, forecast = null, onSubmit }: ForecastFor
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+          <fieldset className="flex flex-col gap-1.5">
+            <legend className="mb-1.5 text-xs font-medium">
+              What are you forecasting?
+              <span className="text-destructive ml-2" aria-hidden="true">
+                *
+              </span>
+            </legend>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {KINDS.map((kind) => {
+                const selected = values.forecastKind === kind;
+                return (
+                  <label
+                    key={kind}
+                    className={cn(
+                      "relative flex cursor-pointer flex-col gap-1 rounded-lg border p-3 transition-colors",
+                      selected
+                        ? "border-primary bg-primary/5 ring-1 ring-primary"
+                        : "hover:bg-accent border-border",
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="forecast-kind"
+                      value={kind}
+                      checked={selected}
+                      onChange={() => handleKindChange(kind)}
+                      className="peer sr-only"
+                    />
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                      <span
+                        className={cn(
+                          "inline-block size-2 rounded-full",
+                          selected ? "bg-primary" : "bg-border",
+                        )}
+                        aria-hidden="true"
+                      />
+                      {KIND_LABELS[kind]} forecast
+                    </span>
+                    <span className="text-muted-foreground text-xs leading-relaxed">
+                      {KIND_DESCRIPTIONS[kind]}
+                    </span>
+                    <span className="peer-focus-visible:ring-ring pointer-events-none absolute rounded-lg peer-focus-visible:ring-2" />
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+
           <Field label="Forecast name" htmlFor="forecast-name" error={errors.name} required>
             <Input
               value={values.name}

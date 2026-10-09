@@ -2,7 +2,7 @@ import { AlertTriangleIcon, InfoIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Disclaimer } from "@/components/layout/Disclaimer";
-import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import { ThemeSwitcher } from "@/components/layout/ThemeSwitcher";
 import { Alert, AlertDescription, AlertIcon } from "@/components/ui/alert";
 import { useForecasts } from "@/lib/storage/forecasts";
 import { cn } from "@/lib/utils";
@@ -30,17 +30,18 @@ export function AppShell({ children, actions, wide = false }: AppShellProps) {
       <header className="bg-background/85 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40 border-b backdrop-blur">
         <div
           className={cn(
-            "mx-auto flex h-14 w-full items-center gap-3 px-4 sm:px-6",
+            "mx-auto flex min-h-14 w-full flex-wrap items-center gap-x-3 gap-y-2 py-2 px-4 sm:px-6",
             wide ? "max-w-6xl" : "max-w-5xl",
           )}
         >
           <a href="/" className="flex items-center gap-2" aria-label="Runway home">
             <RunwayMark />
-            <span className="text-sm font-semibold tracking-tight">Runway</span>
+            {/* The wordmark carries the accent thread, like the name on a label. */}
+            <span className="font-display text-accent-text text-lg tracking-tight">Runway</span>
           </a>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
             {actions}
-            <ThemeToggle />
+            <ThemeSwitcher />
           </div>
         </div>
       </header>
@@ -63,8 +64,8 @@ export function AppShell({ children, actions, wide = false }: AppShellProps) {
       <main
         id="main"
         className={cn(
-          "mx-auto flex w-full flex-1 flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8",
-          wide ? "max-w-6xl" : "max-w-5xl",
+          "mx-auto flex w-full flex-1 flex-col gap-8 px-4 py-8 sm:px-6 sm:py-10",
+          wide ? "max-w-7xl" : "max-w-5xl",
         )}
       >
         {children}
@@ -95,7 +96,7 @@ export function AppShell({ children, actions, wide = false }: AppShellProps) {
   );
 }
 
-/** Inline SVG so the mark needs no extra request and inherits the theme colour. */
+/** Inline SVG so the mark needs no extra request and follows the theme. */
 function RunwayMark() {
   return (
     <svg
@@ -105,10 +106,10 @@ function RunwayMark() {
       aria-hidden="true"
       focusable="false"
     >
-      <rect width="32" height="32" rx="7" className="fill-primary" />
+      <rect width="32" height="32" rx="7" className="fill-foreground" />
       <path
         d="M7 22.5 13 16l4 4 8-9"
-        className="stroke-positive"
+        className="stroke-primary"
         strokeWidth="3"
         fill="none"
         strokeLinecap="round"
