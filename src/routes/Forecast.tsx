@@ -1,5 +1,6 @@
 import {
   ArrowLeftIcon,
+  CircleHelpIcon,
   CopyIcon,
   GitCompareArrowsIcon,
   Loader2Icon,
@@ -30,6 +31,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForecastEditor } from "@/hooks/useForecastEditor";
 import { HORIZON_LABELS } from "@/lib/dates";
 import { runProjection } from "@/lib/forecast/engine";
+import { KIND_LABELS } from "@/lib/sample";
 import { deleteForecast, duplicateForecast, useForecasts } from "@/lib/storage/forecasts";
 
 const TABS = ["overview", "recurring", "one-off", "invoices", "scenarios", "assumptions", "data"] as const;
@@ -144,6 +146,14 @@ export function ForecastPage() {
               </h1>
               <Badge variant="muted">{forecast.currency}</Badge>
               <Badge variant="muted">{HORIZON_LABELS[forecast.horizon]}</Badge>
+              {/*
+               * Shown whenever it is known, because the kind is what decides
+               * which category suggestions the item forms offer. If it reads
+               * wrong, the fix is one visit to the Assumptions tab.
+               */}
+              {forecast.forecastKind !== undefined ? (
+                <Badge variant="muted">{KIND_LABELS[forecast.forecastKind]}</Badge>
+              ) : null}
               {forecast.baseForecastId !== undefined ? (
                 <Badge variant="default">Scenario</Badge>
               ) : null}
@@ -190,6 +200,40 @@ export function ForecastPage() {
             </Button>
           </div>
         </div>
+
+        {/*
+         * A forecast saved before the personal/business split has no kind, and
+         * without one the category suggestions fall back to the full mixed list
+         * — every household and business category at once. Asking once is
+         * cheaper than guessing wrong and quieter than showing everything.
+         */}
+        {forecast.forecastKind === undefined ? (
+          <Alert>
+            <AlertIcon>
+              <CircleHelpIcon />
+            </AlertIcon>
+            <AlertTitle>Which kind of forecast is this?</AlertTitle>
+            <AlertDescription className="flex flex-col items-start gap-3">
+              <span>
+                Personal and business forecasts suggest different categories. Until this one
+                knows which it is, it offers all of them. You can change this later under
+                Assumptions.
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {(Object.keys(KIND_LABELS) as Array<keyof typeof KIND_LABELS>).map((kind) => (
+                  <Button
+                    key={kind}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => update((current) => ({ ...current, forecastKind: kind }))}
+                  >
+                    {KIND_LABELS[kind]}
+                  </Button>
+                ))}
+              </div>
+            </AlertDescription>
+          </Alert>
+        ) : null}
 
         {lastError !== null ? (
           <Alert variant="destructive">

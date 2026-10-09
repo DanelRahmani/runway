@@ -38,13 +38,20 @@ const BOTH: readonly ForecastKind[] = ["PERSONAL", "BUSINESS"];
 /** Defaults `isTransfer` to false so only the balance-sheet movements set it. */
 const CATEGORY_INPUTS: readonly CategoryInput[] = [
   /* ------------------------------------------------------------- personal -- */
+  /*
+   * A household's income is a salary, not a client invoice. Without this the
+   * only personal income suggestion was "Client income", which reads as
+   * business and left a salaried household with nothing that fitted.
+   */
+  { label: "Salary", emoji: "💵", kinds: ["PERSONAL"], direction: "INFLOW" },
   { label: "Housing", emoji: "🏠", kinds: ["PERSONAL"], direction: "OUTFLOW" },
   { label: "Groceries", emoji: "🛒", kinds: ["PERSONAL"], direction: "OUTFLOW" },
   { label: "Eating out", emoji: "🍽️", kinds: ["PERSONAL"], direction: "OUTFLOW" },
   { label: "Transport", emoji: "🚌", kinds: ["PERSONAL"], direction: "OUTFLOW" },
   { label: "Fuel", emoji: "⛽", kinds: ["PERSONAL"], direction: "OUTFLOW" },
   { label: "Utilities", emoji: "💡", kinds: ["PERSONAL"], direction: "OUTFLOW" },
-  { label: "Phone & internet", emoji: "📱", kinds: ["PERSONAL"], direction: "OUTFLOW" },
+  // Businesses pay for phones and connectivity too, so this is not household-only.
+  { label: "Phone & internet", emoji: "📱", kinds: BOTH, direction: "OUTFLOW" },
   { label: "Subscriptions", emoji: "🎬", kinds: ["PERSONAL"], direction: "OUTFLOW" },
   { label: "Health", emoji: "🩺", kinds: ["PERSONAL"], direction: "OUTFLOW" },
   { label: "Fitness", emoji: "🏋️", kinds: ["PERSONAL"], direction: "OUTFLOW" },
