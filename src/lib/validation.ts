@@ -79,6 +79,8 @@ export const recurringItemSchema = z
     startDate: isoDateSchema,
     // Optional so items saved before month-end anchoring existed still load.
     anchor: recurrenceAnchorSchema.optional(),
+    /** Only meaningful on a transfer; ignored for ordinary spending. */
+    accountId: trimmed(64, "Account reference is too long").optional(),
     endDate: isoDateSchema.optional(),
     category: trimmed(40, "Category is too long").optional(),
     note: trimmed(280, "Note is too long").optional(),
@@ -97,6 +99,8 @@ export const oneOffItemSchema = z.object({
   date: isoDateSchema,
   category: trimmed(40, "Category is too long").optional(),
   note: trimmed(280, "Note is too long").optional(),
+  /** Only meaningful on a transfer; ignored for ordinary spending. */
+  accountId: trimmed(64, "Account reference is too long").optional(),
 });
 
 export const invoiceSchema = z.object({
@@ -119,6 +123,32 @@ export const invoiceSchema = z.object({
   recurrence: invoiceRecurrenceSchema,
 });
 
+export const accountKindSchema = z.enum(["CASH", "SAVINGS", "INVESTMENT", "DEBT"]);
+
+/**
+ * A pot beyond the spending account.
+ *
+ * The rate is in basis points and defaults to 0 rather than to any guess: a
+ * return is an assumption the user makes, not one Runway should make for them.
+ * 2,000 bps (20%) is the ceiling — beyond that it is a typo, not a plan.
+ */
+export const accountSchema = z.object({
+  id: z.string().min(1),
+  name: requiredText(60, "Give this account a name"),
+  kind: accountKindSchema,
+  startingBalanceCents: amountCentsSchema,
+  annualRateBps: z
+    .preprocess(
+      toWholeUnits,
+      z
+        .number({ error: "Enter a rate" })
+        .int("Enter a whole number of basis points")
+        .min(-2_000, "That rate is implausibly negative")
+        .max(2_000, "That rate is implausibly high"),
+    )
+    .optional(),
+});
+
 export const forecastGoalSchema = z.object({
   label: requiredText(60, "Give the goal a name"),
   targetCents: positiveAmountCentsSchema,
@@ -137,6 +167,9 @@ export const forecastSchema = z.object({
   notes: trimmed(500, "Notes are too long").optional(),
   // Optional, so a forecast saved or exported before goals existed still loads.
   goal: forecastGoalSchema.optional(),
+  // Likewise optional for accounts: a forecast without them still projects, with
+  // the spending account synthesised from its starting balance.
+  accounts: z.array(accountSchema).max(20, "Too many accounts").optional(),
   recurringItems: z.array(recurringItemSchema).max(200, "Too many recurring items"),
   oneOffItems: z.array(oneOffItemSchema).max(400, "Too many one-off items"),
   invoices: z.array(invoiceSchema).max(200, "Too many invoices"),

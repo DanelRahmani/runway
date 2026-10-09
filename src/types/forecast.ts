@@ -63,6 +63,37 @@ export type ForecastKind = "PERSONAL" | "BUSINESS";
 /** Calendar date as `YYYY-MM-DD`. Always interpreted as a wall-clock date, never as a UTC instant. */
 export type IsoDate = string;
 
+/**
+ * What kind of pot an account is.
+ *
+ * The spending account is always `CASH` and is derived from the forecast's own
+ * starting balance rather than being stored in `accounts`, so the balance the
+ * dashboard leads with cannot disagree with the one the setup form edits.
+ * A `DEBT` account holds a negative balance: what you owe.
+ */
+export type AccountKind = "CASH" | "SAVINGS" | "INVESTMENT" | "DEBT";
+
+/**
+ * A pot money is kept in, separate from the spending account.
+ *
+ * Balances are only ever moved by a transfer that names this account, or by the
+ * rate below — Runway never guesses that an ordinary expense came from savings.
+ */
+export interface Account {
+  id: string;
+  name: string;
+  kind: AccountKind;
+  startingBalanceCents: number;
+  /**
+   * Annual rate in basis points, so 500 is 5%. Compounded monthly on the closing
+   * balance and rounded to whole cents each month.
+   *
+   * Defaults to 0, and deliberately so: a return is an assumption the user has to
+   * make. On a `DEBT` account a positive rate grows what you owe.
+   */
+  annualRateBps?: number;
+}
+
 export interface RecurringItem {
   id: string;
   name: string;
@@ -75,6 +106,12 @@ export interface RecurringItem {
    * Optional so items saved before this existed keep their anchor day.
    */
   anchor?: RecurrenceAnchor;
+  /**
+   * Which pot this transfer lands in. Only meaningful when the category is a
+   * transfer — Savings, Investing, Pension or Debt repayment. Ordinary spending
+   * always comes out of the spending account, so the field is ignored there.
+   */
+  accountId?: string;
   endDate?: string;
   category?: string;
   note?: string;
@@ -89,6 +126,8 @@ export interface OneOffItem {
   date: IsoDate;
   category?: string;
   note?: string;
+  /** Which pot this transfer lands in. See `RecurringItem.accountId`. */
+  accountId?: string;
 }
 
 export interface Invoice {
@@ -130,6 +169,13 @@ export interface Forecast {
   notes?: string;
   /** Optional savings target. Absent means this forecast is not chasing one. */
   goal?: ForecastGoal;
+  /**
+   * Pots beyond the spending account: savings, investments, debts.
+   *
+   * Absent or empty on every forecast saved before accounts existed, which is why
+   * it is optional — the spending account is synthesised and needs no record.
+   */
+  accounts?: Account[];
   recurringItems: RecurringItem[];
   oneOffItems: OneOffItem[];
   invoices: Invoice[];
