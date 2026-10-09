@@ -15,6 +15,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { ErrorBoundary } from "@/components/layout/ErrorBoundary";
 import { AssumptionsTab } from "@/components/forecast/AssumptionsTab";
 import { DataTab } from "@/components/forecast/DataTab";
+import { GraphDrawer } from "@/components/forecast/GraphDrawer";
 import { InvoicesTab } from "@/components/forecast/InvoicesTab";
 import { KpiCards } from "@/components/forecast/KpiCards";
 import { OneOffTab } from "@/components/forecast/OneOffTab";
@@ -161,6 +162,7 @@ export function ForecastPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <GraphDrawer projection={projection} currency={forecast.currency} />
             {baseForecast !== undefined ? (
               <Button variant="outline" size="sm" asChild>
                 <Link to={`/compare?a=${baseForecast.id}&b=${forecast.id}`}>

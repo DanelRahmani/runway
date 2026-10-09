@@ -1,8 +1,8 @@
 import { DownloadIcon } from "lucide-react";
 import { useState } from "react";
 
-import { BalanceChart, type BalancePoint } from "@/components/charts/BalanceChart";
 import { CategoryBreakdown } from "@/components/charts/CategoryBreakdown";
+import { BalanceChartPanel } from "@/components/forecast/BalanceChartPanel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -36,52 +36,28 @@ export function OverviewTab({ forecast, projection }: OverviewTabProps) {
   const [granularity, setGranularity] = useState<Granularity>("weekly");
 
   const periods = aggregate(projection.days, granularity);
-  const chartData: BalancePoint[] = projection.days.map((day) => ({
-    date: day.date,
-    label: day.date,
-    balanceCents: day.closingCents,
-  }));
 
   return (
     <div className="flex flex-col gap-4">
-      <Card>
-        <CardHeader className="flex-row flex-wrap items-start justify-between gap-3">
-          <div className="flex flex-col gap-1">
-            <CardTitle>Projected balance</CardTitle>
-            <CardDescription>
-              {formatIsoDateRange(projection.startDate, projection.endDate)} ·{" "}
-              {projection.days.length} days
-            </CardDescription>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+      <BalanceChartPanel
+        projection={projection}
+        currency={forecast.currency}
+        actions={
+          <>
             <GranularityToggle value={granularity} onChange={setGranularity} />
             <Button
               variant="outline"
               size="sm"
               onClick={() =>
-                exportProjectionToCsv(
-                  forecast.name,
-                  forecast.currency,
-                  periods,
-                  granularity,
-                )
+                exportProjectionToCsv(forecast.name, forecast.currency, periods, granularity)
               }
             >
               <DownloadIcon />
               CSV
             </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <BalanceChart
-            data={chartData}
-            currency={forecast.currency}
-            minimumDate={projection.summary.minimumBalanceDate}
-            minimumCents={projection.summary.minimumBalanceCents}
-          />
-          <ChartLegend minimumCents={projection.summary.minimumBalanceCents} />
-        </CardContent>
-      </Card>
+          </>
+        }
+      />
 
       <ProjectionTable periods={periods} currency={forecast.currency} granularity={granularity} />
 
@@ -125,33 +101,6 @@ function GranularityToggle({
           {option.label}
         </button>
       ))}
-    </div>
-  );
-}
-
-function ChartLegend({ minimumCents }: { minimumCents: number }) {
-  return (
-    <div className="text-muted-foreground mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
-      <span className="flex items-center gap-1.5">
-        <span className="bg-positive inline-block size-2.5 rounded-full" aria-hidden="true" />
-        Balance above zero
-      </span>
-      <span className="flex items-center gap-1.5">
-        <span className="bg-negative inline-block size-2.5 rounded-full" aria-hidden="true" />
-        Balance below zero
-      </span>
-      <span className="flex items-center gap-1.5">
-        <span
-          className={cn(
-            "inline-block size-2.5 rounded-full border-2 border-background",
-            minimumCents < 0
-              ? "bg-negative ring-1 ring-negative"
-              : "bg-positive ring-1 ring-positive",
-          )}
-          aria-hidden="true"
-        />
-        Lowest point
-      </span>
     </div>
   );
 }

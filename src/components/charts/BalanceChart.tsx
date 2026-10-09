@@ -18,6 +18,7 @@ import {
 } from "@/components/charts/chart-utils";
 import { formatCents, formatCentsCompact } from "@/lib/money";
 import { formatIsoDate } from "@/lib/dates";
+import { cn } from "@/lib/utils";
 import type { Currency, IsoDate } from "@/types/forecast";
 
 export interface BalancePoint {
@@ -169,6 +170,39 @@ function BalanceTooltip({ active, payload, label, currency }: TooltipContentProp
       {negative ? (
         <p className="text-negative mt-1">Below zero — cash is short on this date.</p>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * Names the colours rather than leaving the reader to infer them.
+ *
+ * The lowest-point marker is a separate entry in its own right, because "when do
+ * I hit bottom" is a different question from "when do I run out".
+ */
+export function ChartLegend({ minimumCents }: { minimumCents: number }) {
+  return (
+    <div className="text-muted-foreground mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
+      <span className="flex items-center gap-1.5">
+        <span className="bg-positive inline-block size-2.5 rounded-full" aria-hidden="true" />
+        Balance above zero
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="bg-negative inline-block size-2.5 rounded-full" aria-hidden="true" />
+        Balance below zero
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span
+          className={cn(
+            "inline-block size-2.5 rounded-full border-2 border-background",
+            minimumCents < 0
+              ? "bg-negative ring-1 ring-negative"
+              : "bg-positive ring-1 ring-positive",
+          )}
+          aria-hidden="true"
+        />
+        Lowest point
+      </span>
     </div>
   );
 }
