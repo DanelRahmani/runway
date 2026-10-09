@@ -1,0 +1,277 @@
+import {
+  ArrowLeftIcon,
+  CopyIcon,
+  GitCompareArrowsIcon,
+  Loader2Icon,
+  SearchXIcon,
+  Trash2Icon,
+  TriangleAlertIcon,
+} from "lucide-react";
+import { useMemo, useState } from "react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+
+import { ConfirmDialog } from "@/components/forms/ConfirmDialog";
+import { AppShell } from "@/components/layout/AppShell";
+import { ErrorBoundary } from "@/components/layout/ErrorBoundary";
+import { AssumptionsTab } from "@/components/forecast/AssumptionsTab";
+import { DataTab } from "@/components/forecast/DataTab";
+import { InvoicesTab } from "@/components/forecast/InvoicesTab";
+import { KpiCards } from "@/components/forecast/KpiCards";
+import { OneOffTab } from "@/components/forecast/OneOffTab";
+import { OverviewTab } from "@/components/forecast/OverviewTab";
+import { RecurringTab } from "@/components/forecast/RecurringTab";
+import { SaveIndicator } from "@/components/forecast/SaveIndicator";
+import { ScenariosTab } from "@/components/forecast/ScenariosTab";
+import { Alert, AlertDescription, AlertIcon, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useForecastEditor } from "@/hooks/useForecastEditor";
+import { HORIZON_LABELS } from "@/lib/dates";
+import { runProjection } from "@/lib/forecast/engine";
+import { deleteForecast, duplicateForecast, useForecasts } from "@/lib/storage/forecasts";
+
+const TABS = ["overview", "recurring", "one-off", "invoices", "scenarios", "assumptions", "data"] as const;
+type TabValue = (typeof TABS)[number];
+
+const TAB_LABELS: Record<TabValue, string> = {
+  overview: "Overview",
+  recurring: "Recurring",
+  "one-off": "One-off",
+  invoices: "Invoices",
+  scenarios: "Scenarios",
+  assumptions: "Assumptions",
+  data: "Data",
+};
+
+export function ForecastPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const { forecast, loading, notFound, saveState, update, lastError } = useForecastEditor(id);
+  const { forecasts } = useForecasts();
+
+  const requestedTab = searchParams.get("tab");
+  const activeTab: TabValue = TABS.includes(requestedTab as TabValue)
+    ? (requestedTab as TabValue)
+    : "overview";
+
+  // Pure and cheap for a few hundred days; memoised so typing in a form does not
+  // re-run the engine on every unrelated render.
+  const projection = useMemo(
+    () => (forecast === null ? null : runProjection(forecast)),
+    [forecast],
+  );
+
+  const scenarios = useMemo(
+    () =>
+      forecast === null
+        ? []
+        : forecasts.filter((candidate) => candidate.baseForecastId === forecast.id),
+    [forecasts, forecast],
+  );
+
+  const baseForecast =
+    forecast?.baseForecastId === undefined
+      ? undefined
+      : forecasts.find((candidate) => candidate.id === forecast.baseForecastId);
+
+  if (loading) {
+    return (
+      <AppShell wide>
+        <div
+          className="text-muted-foreground flex items-center justify-center gap-2 py-24 text-sm"
+          role="status"
+        >
+          <Loader2Icon className="size-4 animate-spin" />
+          Loading forecast…
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (notFound || forecast === null || projection === null) {
+    return (
+      <AppShell wide>
+        <Alert variant="destructive">
+          <AlertIcon>
+            <SearchXIcon />
+          </AlertIcon>
+          <AlertTitle>That forecast is not in this browser.</AlertTitle>
+          <AlertDescription className="flex flex-col items-start gap-3">
+            <span>
+              It may have been deleted, or it lives in a different browser profile. If you exported a
+              JSON backup, you can import it from the Data page.
+            </span>
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/">
+                <ArrowLeftIcon />
+                Back to your forecasts
+              </Link>
+            </Button>
+          </AlertDescription>
+        </Alert>
+      </AppShell>
+    );
+  }
+
+  const setTab = (value: string): void => {
+    // Keep the tab in the URL so refresh and back/forward behave as expected.
+    setSearchParams(value === "overview" ? {} : { tab: value }, { replace: true });
+  };
+
+  return (
+    <AppShell
+      wide
+      actions={
+        <Button variant="ghost" size="sm" asChild>
+          <Link to="/">
+            <ArrowLeftIcon />
+            <span className="hidden sm:inline">All forecasts</span>
+          </Link>
+        </Button>
+      }
+    >
+      <header className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex flex-col gap-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{forecast.name}</h1>
+              <Badge variant="muted">{forecast.currency}</Badge>
+              <Badge variant="muted">{HORIZON_LABELS[forecast.horizon]}</Badge>
+              {forecast.baseForecastId !== undefined ? (
+                <Badge variant="default">Scenario</Badge>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <SaveIndicator state={saveState} />
+              {baseForecast !== undefined ? (
+                <Link
+                  to={`/forecast/${baseForecast.id}`}
+                  className="text-muted-foreground hover:text-foreground text-xs underline-offset-4 hover:underline"
+                >
+                  Based on “{baseForecast.name}”
+                </Link>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {baseForecast !== undefined ? (
+              <Button variant="outline" size="sm" asChild>
+                <Link to={`/compare?a=${baseForecast.id}&b=${forecast.id}`}>
+                  <GitCompareArrowsIcon />
+                  Compare with base
+                </Link>
+              </Button>
+            ) : null}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void duplicateForecast(forecast.id)}
+            >
+              <CopyIcon />
+              Duplicate
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="text-destructive"
+              aria-label={`Delete ${forecast.name}`}
+              onClick={() => setConfirmDelete(true)}
+            >
+              <Trash2Icon />
+            </Button>
+          </div>
+        </div>
+
+        {lastError !== null ? (
+          <Alert variant="destructive">
+            <AlertIcon>
+              <TriangleAlertIcon />
+            </AlertIcon>
+            <AlertDescription>{lastError}</AlertDescription>
+          </Alert>
+        ) : null}
+      </header>
+
+      <ErrorBoundary label="the summary figures">
+        <KpiCards projection={projection} currency={forecast.currency} />
+      </ErrorBoundary>
+
+      <Tabs value={activeTab} onValueChange={setTab} className="flex flex-col gap-4">
+        <div className="scrollbar-thin -mx-1 overflow-x-auto px-1 pb-0.5">
+          <TabsList className="w-max">
+            {TABS.map((tab) => (
+              <TabsTrigger key={tab} value={tab}>
+                {TAB_LABELS[tab]}
+                {tab === "scenarios" && scenarios.length > 0 ? (
+                  <span className="bg-muted text-muted-foreground ml-1 rounded px-1 text-[10px]">
+                    {scenarios.length}
+                  </span>
+                ) : null}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
+
+        <TabsContent value="overview">
+          <ErrorBoundary label="the projection">
+            <OverviewTab forecast={forecast} projection={projection} />
+          </ErrorBoundary>
+        </TabsContent>
+
+        <TabsContent value="recurring">
+          <ErrorBoundary label="recurring items">
+            <RecurringTab forecast={forecast} update={update} />
+          </ErrorBoundary>
+        </TabsContent>
+
+        <TabsContent value="one-off">
+          <ErrorBoundary label="one-off items">
+            <OneOffTab forecast={forecast} update={update} />
+          </ErrorBoundary>
+        </TabsContent>
+
+        <TabsContent value="invoices">
+          <ErrorBoundary label="invoices">
+            <InvoicesTab forecast={forecast} update={update} />
+          </ErrorBoundary>
+        </TabsContent>
+
+        <TabsContent value="scenarios">
+          <ErrorBoundary label="scenarios">
+            <ScenariosTab forecast={forecast} scenarios={scenarios} />
+          </ErrorBoundary>
+        </TabsContent>
+
+        <TabsContent value="assumptions">
+          <ErrorBoundary label="assumptions">
+            <AssumptionsTab forecast={forecast} update={update} />
+          </ErrorBoundary>
+        </TabsContent>
+
+        <TabsContent value="data">
+          <ErrorBoundary label="data tools">
+            <DataTab forecast={forecast} projection={projection} />
+          </ErrorBoundary>
+        </TabsContent>
+      </Tabs>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={`Delete "${forecast.name}"?`}
+        description="This permanently removes the forecast from this browser. Export a backup from the Data tab first if you might want it back."
+        confirmLabel="Delete forecast"
+        onConfirm={() => {
+          void deleteForecast(forecast.id).then(() => {
+            navigate("/");
+          });
+        }}
+      />
+    </AppShell>
+  );
+}

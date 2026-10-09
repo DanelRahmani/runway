@@ -1,0 +1,171 @@
+import { addDays, todayIso } from "@/lib/dates";
+import { createId } from "@/lib/utils";
+import type { Forecast } from "@/types/forecast";
+
+/**
+ * A realistic starting point for the "try the sample" button.
+ *
+ * Deliberately includes a shortfall: the whole point of Runway is to surface one,
+ * and an empty sample would teach the user nothing. The numbers describe a
+ * freelance designer with more outgoings than a good month covers.
+ */
+export function createSampleForecast(startDate = todayIso()): Forecast {
+  const now = new Date().toISOString();
+
+  return {
+    id: createId(),
+    name: "Freelance cash flow (sample)",
+    currency: "EUR",
+    startingBalanceCents: 420_000,
+    startDate,
+    horizon: "TWELVE_MONTHS",
+    notes: "Sample data. Edit or delete anything — nothing here leaves your browser.",
+    recurringItems: [
+      {
+        id: createId(),
+        name: "Retainer — Acme Studio",
+        direction: "INFLOW",
+        amountCents: 220_000,
+        frequency: "MONTHLY",
+        startDate,
+        category: "Client work",
+        note: "Paid on the 1st",
+        isActive: true,
+      },
+      {
+        id: createId(),
+        name: "Transport",
+        direction: "OUTFLOW",
+        amountCents: 18_500,
+        frequency: "MONTHLY",
+        startDate,
+        category: "Travel",
+        isActive: true,
+      },
+      {
+        id: createId(),
+        name: "Rent",
+        direction: "OUTFLOW",
+        amountCents: 135_000,
+        frequency: "MONTHLY",
+        startDate,
+        category: "Housing",
+        isActive: true,
+      },
+      {
+        id: createId(),
+        name: "Health insurance",
+        direction: "OUTFLOW",
+        amountCents: 13_200,
+        frequency: "MONTHLY",
+        startDate,
+        category: "Insurance",
+        isActive: true,
+      },
+      {
+        id: createId(),
+        name: "Software subscriptions",
+        direction: "OUTFLOW",
+        amountCents: 4_900,
+        frequency: "MONTHLY",
+        startDate,
+        category: "Tools",
+        isActive: true,
+      },
+      {
+        id: createId(),
+        name: "Gym",
+        direction: "OUTFLOW",
+        amountCents: 3_500,
+        frequency: "MONTHLY",
+        startDate,
+        category: "Personal",
+        isActive: true,
+      },
+      {
+        id: createId(),
+        name: "Tax provision",
+        direction: "OUTFLOW",
+        amountCents: 60_000,
+        frequency: "QUARTERLY",
+        startDate: addDays(startDate, 30),
+        category: "Tax",
+        note: "Set aside roughly a quarter of profit",
+        isActive: true,
+      },
+      {
+        id: createId(),
+        name: "Studio membership",
+        direction: "OUTFLOW",
+        amountCents: 9_000,
+        frequency: "WEEKLY",
+        startDate,
+        category: "Workspace",
+        isActive: true,
+      },
+    ],
+    oneOffItems: [
+      {
+        id: createId(),
+        name: "Laptop replacement",
+        direction: "OUTFLOW",
+        amountCents: 265_000,
+        date: addDays(startDate, 45),
+        category: "Equipment",
+        note: "Four years old, screen failing",
+      },
+      {
+        id: createId(),
+        name: "Conference ticket",
+        direction: "OUTFLOW",
+        amountCents: 89_000,
+        date: addDays(startDate, 120),
+        category: "Professional development",
+      },
+      {
+        id: createId(),
+        name: "Annual tax payment",
+        direction: "OUTFLOW",
+        amountCents: 410_000,
+        date: addDays(startDate, 210),
+        category: "Tax",
+        note: "Final assessment for last year",
+      },
+    ],
+    invoices: [
+      {
+        id: createId(),
+        clientName: "Northwind BV",
+        amountCents: 380_000,
+        issueDate: addDays(startDate, -20),
+        expectedPaymentDate: addDays(startDate, 10),
+        paymentDelayDays: 14,
+        status: "EXPECTED",
+        recurrence: "NONE",
+      },
+      {
+        id: createId(),
+        clientName: "Acme Studio",
+        amountCents: 145_000,
+        issueDate: addDays(startDate, 5),
+        expectedPaymentDate: addDays(startDate, 40),
+        paymentDelayDays: 7,
+        status: "EXPECTED",
+        recurrence: "MONTHLY",
+      },
+      {
+        id: createId(),
+        clientName: "Lumen Group",
+        amountCents: 92_500,
+        issueDate: addDays(startDate, 15),
+        expectedPaymentDate: addDays(startDate, 60),
+        paymentDelayDays: 21,
+        status: "EXPECTED",
+        recurrence: "QUARTERLY",
+      },
+    ],
+    createdAt: now,
+    updatedAt: now,
+    archived: false,
+  };
+}

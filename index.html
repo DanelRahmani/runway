@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)" />
+
+    <title>Runway — Know when your cash runs out</title>
+    <meta
+      name="description"
+      content="Runway is a private, offline-first cash-flow and runway forecaster for freelancers, students and small businesses. Model recurring income, invoice delays and what-if scenarios in your browser."
+    />
+    <link rel="canonical" href="https://runway.vercel.app/" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Runway" />
+    <meta property="og:title" content="Runway — Know when your cash runs out" />
+    <meta
+      property="og:description"
+      content="A private, offline-first cash-flow and runway forecaster. Your data never leaves your browser."
+    />
+    <meta property="og:url" content="https://runway.vercel.app/" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Runway — Know when your cash runs out" />
+    <meta
+      name="twitter:description"
+      content="A private, offline-first cash-flow and runway forecaster. Your data never leaves your browser."
+    />
+
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2318181b'/%3E%3Cpath d='M7 22.5 13 16l4 4 8-9' stroke='%234ade80' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+
+    <script>
+      // Apply the stored theme before first paint to avoid a flash of the wrong theme.
+      (function () {
+        try {
+          var stored = localStorage.getItem("runway.theme");
+          var dark =
+            stored === "dark" ||
+            (stored !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          if (dark) document.documentElement.classList.add("dark");
+        } catch (_) {
+          /* localStorage unavailable — fall back to the light theme */
+        }
+      })();
+    </script>
+  </head>
+  <body class="h-full">
+    <div id="root" class="min-h-full"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
