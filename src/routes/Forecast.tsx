@@ -284,7 +284,11 @@ export function ForecastPage() {
 
         <TabsContent value="savings">
           <ErrorBoundary label="the savings view">
-            <SavingsTab forecast={forecast} projection={projection} />
+            <SavingsTab
+              forecast={forecast}
+              projection={projection}
+              onGoalChange={(goal) => update((current) => ({ ...current, goal }))}
+            />
           </ErrorBoundary>
         </TabsContent>
 

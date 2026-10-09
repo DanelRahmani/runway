@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { foldToDonutSlices } from "@/lib/donut";
 import { runProjection } from "@/lib/forecast/engine";
-import { savingsSummary } from "@/lib/forecast/savings";
+import { goalProgress, keptCurve, savingsSummary } from "@/lib/forecast/savings";
 import type {
   Forecast,
   IsoDate,
@@ -173,5 +173,90 @@ describe("donut slices", () => {
     const folded = foldToDonutSlices(slices, 2);
 
     expect(folded).toEqual([slice("big", 1000), { key: "other", label: "Other (2)", cents: 501 }]);
+  });
+});
+
+describe("kept curve and goals", () => {
+  const saver = makeForecast({ recurringItems: [recurring(50_000, "Savings")] });
+
+  it("accumulates kept money without ever going down", () => {
+    const values = keptCurve(runProjection(saver)).map((point) => point.cumulativeCents);
+
+    expect(values.length).toBeGreaterThan(1);
+    expect(values).toEqual([...values].sort((a, b) => a - b));
+    expect(values.at(-1) ?? 0).toBeGreaterThan(0);
+  });
+
+  it("agrees with the savings summary on the total", () => {
+    const projection = runProjection(saver);
+
+    expect(keptCurve(projection).at(-1)?.cumulativeCents).toBe(savingsSummary(projection).keptCents);
+  });
+
+  it("counts only transfers, not spending", () => {
+    // One-off items, so the totals are exactly what is written here. A recurring
+    // item would fire several times across the horizon and make the assertion a
+    // restatement of the recurrence rules rather than of this function.
+    const withSpending = makeForecast({
+      oneOffItems: [
+        oneOff(50_000, "Housing", "2026-01-05"),
+        oneOff(10_000, "Savings", "2026-01-05"),
+      ],
+    });
+    const curve = keptCurve(runProjection(withSpending));
+
+    expect(curve.at(-1)?.cumulativeCents).toBe(10_000);
+  });
+
+  it("reaches the target before its date when the plan allows", () => {
+    const progress = goalProgress(runProjection(saver), {
+      label: "Japan",
+      targetCents: 50_000,
+      targetDate: "2026-03-31",
+    });
+
+    expect(progress.onTrack).toBe(true);
+    expect(progress.reachedDate).not.toBeNull();
+    expect((progress.reachedDate ?? "") <= "2026-03-31").toBe(true);
+    expect(progress.shortfallCents).toBe(0);
+    expect(progress.fraction).toBe(1);
+  });
+
+  it("treats reaching the target after the deadline as late, not on track", () => {
+    const progress = goalProgress(runProjection(saver), {
+      label: "Japan",
+      targetCents: 50_000,
+      // Deliberately before the forecast starts, so nothing can land in time.
+      targetDate: "2025-12-31",
+    });
+
+    expect(progress.reachedDate).not.toBeNull();
+    expect(progress.onTrack).toBe(false);
+  });
+
+  it("refuses to claim on track when the date is beyond the horizon", () => {
+    const progress = goalProgress(runProjection(saver), {
+      label: "Deposit",
+      targetCents: 10_000_000,
+      targetDate: "2030-01-01",
+    });
+
+    expect(progress.inconclusive).toBe(true);
+    expect(progress.onTrack).toBe(false);
+    expect(progress.reachedDate).toBeNull();
+    expect(progress.shortfallCents).toBeGreaterThan(0);
+    expect(progress.fraction).toBeLessThan(1);
+  });
+
+  it("reports a goal the plan misses inside the horizon as simply not on track", () => {
+    const progress = goalProgress(runProjection(saver), {
+      label: "Deposit",
+      targetCents: 10_000_000,
+      targetDate: "2026-02-01",
+    });
+
+    expect(progress.inconclusive).toBe(false);
+    expect(progress.onTrack).toBe(false);
+    expect(progress.shortfallCents).toBe(10_000_000 - progress.keptCents);
   });
 });

@@ -64,6 +64,19 @@ export interface Invoice {
   recurrence: InvoiceRecurrence;
 }
 
+/**
+ * A named target the forecast is working towards.
+ *
+ * Stored on the forecast rather than in its own table: a goal only has meaning
+ * against one set of assumptions, and a scenario should be free to chase a
+ * different one.
+ */
+export interface ForecastGoal {
+  label: string;
+  targetCents: number;
+  targetDate: IsoDate;
+}
+
 export interface Forecast {
   id: string;
   name: string;
@@ -77,6 +90,8 @@ export interface Forecast {
   startDate: IsoDate;
   horizon: Horizon;
   notes?: string;
+  /** Optional savings target. Absent means this forecast is not chasing one. */
+  goal?: ForecastGoal;
   recurringItems: RecurringItem[];
   oneOffItems: OneOffItem[];
   invoices: Invoice[];

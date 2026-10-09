@@ -1,17 +1,23 @@
-import { PiggyBankIcon } from "lucide-react";
-import { useMemo, type ReactNode } from "react";
+import { PiggyBankIcon, TargetIcon } from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import { DonutChart } from "@/components/charts/DonutChart";
 import { AnimatedMoney } from "@/components/forecast/AnimatedMoney";
+import { Field } from "@/components/forms/Field";
+import { MoneyInput } from "@/components/forms/MoneyInput";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { savingsSummary } from "@/lib/forecast/savings";
+import { Input } from "@/components/ui/input";
+import { formatIsoDate } from "@/lib/dates";
+import { goalProgress, savingsSummary } from "@/lib/forecast/savings";
 import { formatCents } from "@/lib/money";
 import { cn, formatPercent } from "@/lib/utils";
-import type { Forecast, Projection } from "@/types/forecast";
+import type { Currency, Forecast, ForecastGoal, Projection } from "@/types/forecast";
 
 interface SavingsTabProps {
   forecast: Forecast;
   projection: Projection;
+  onGoalChange: (goal: ForecastGoal | undefined) => void;
 }
 
 /**
@@ -21,7 +27,7 @@ interface SavingsTabProps {
  * not yet know what was already in savings, because there are no accounts, so the
  * copy is careful to say what moved rather than what is held.
  */
-export function SavingsTab({ forecast, projection }: SavingsTabProps) {
+export function SavingsTab({ forecast, projection, onGoalChange }: SavingsTabProps) {
   const currency = forecast.currency;
   const summary = useMemo(() => savingsSummary(projection), [projection]);
 
@@ -71,6 +77,13 @@ export function SavingsTab({ forecast, projection }: SavingsTabProps) {
           </dl>
         </CardContent>
       </Card>
+
+      <GoalCard
+        projection={projection}
+        currency={currency}
+        goal={forecast.goal}
+        onGoalChange={onGoalChange}
+      />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
@@ -147,6 +160,170 @@ export function SavingsTab({ forecast, projection }: SavingsTabProps) {
       </Card>
     </div>
   );
+}
+
+/**
+ * A savings target, and whether the current plan reaches it.
+ *
+ * The verdict is deliberately cautious: when the target date sits beyond the
+ * horizon the projection simply cannot know, and it says so rather than
+ * optimistically reporting "on track".
+ */
+function GoalCard({
+  projection,
+  currency,
+  goal,
+  onGoalChange,
+}: {
+  projection: Projection;
+  currency: Currency;
+  goal: ForecastGoal | undefined;
+  onGoalChange: (goal: ForecastGoal | undefined) => void;
+}) {
+  const [editing, setEditing] = useState(goal === undefined);
+  const [label, setLabel] = useState(goal?.label ?? "");
+  const [targetCents, setTargetCents] = useState(goal?.targetCents ?? 0);
+  const [targetDate, setTargetDate] = useState(goal?.targetDate ?? projection.endDate);
+
+  const progress = goal === undefined ? null : goalProgress(projection, goal);
+
+  const save = (): void => {
+    onGoalChange({ label: label.trim(), targetCents, targetDate });
+    setEditing(false);
+  };
+
+  const canSave = label.trim() !== "" && targetCents > 0 && targetDate !== "";
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <TargetIcon className="size-3.5" />
+          Goal
+        </CardTitle>
+        <CardDescription>
+          {progress === null
+            ? "Name a target and Runway will say whether the plan reaches it."
+            : `${progress.goal.label} — ${formatCents(progress.targetCents, currency)} by ${formatIsoDate(progress.goal.targetDate)}.`}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        {editing ? (
+          <form
+            className="flex flex-col gap-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (canSave) save();
+            }}
+          >
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <Field label="What for" htmlFor="goal-label">
+                <Input
+                  id="goal-label"
+                  value={label}
+                  placeholder="e.g. Japan"
+                  autoComplete="off"
+                  onChange={(event) => setLabel(event.target.value)}
+                />
+              </Field>
+              <Field label="Target" htmlFor="goal-amount">
+                <MoneyInput
+                  valueCents={targetCents}
+                  onValueChange={setTargetCents}
+                  currency={currency}
+                />
+              </Field>
+              <Field label="By when" htmlFor="goal-date">
+                <Input
+                  id="goal-date"
+                  type="date"
+                  value={targetDate}
+                  onChange={(event) => setTargetDate(event.target.value)}
+                />
+              </Field>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" size="sm" disabled={!canSave}>
+                Save goal
+              </Button>
+              {goal !== undefined ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setEditing(false)}
+                >
+                  Cancel
+                </Button>
+              ) : null}
+            </div>
+          </form>
+        ) : progress !== null ? (
+          <>
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-baseline justify-between gap-3 text-xs">
+                <span className="text-muted-foreground">
+                  <AnimatedMoney cents={progress.keptCents} currency={currency} /> kept of{" "}
+                  {formatCents(progress.targetCents, currency)}
+                </span>
+                <span className="tnum font-medium">{formatPercent(progress.fraction)}</span>
+              </div>
+              <div
+                className="bg-muted h-2 w-full overflow-hidden rounded-full"
+                role="img"
+                aria-label={`${formatPercent(progress.fraction)} of the goal reached`}
+              >
+                <div
+                  className={cn(
+                    "h-full rounded-full transition-[width] duration-300",
+                    progress.onTrack ? "bg-positive" : "bg-accent",
+                  )}
+                  style={{ width: `${Math.max(1, progress.fraction * 100)}%` }}
+                />
+              </div>
+            </div>
+
+            <p
+              className={cn(
+                "text-xs leading-relaxed",
+                progress.onTrack ? "text-positive" : "text-muted-foreground",
+              )}
+            >
+              {goalVerdict(progress, currency)}
+            </p>
+
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+                Change goal
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => onGoalChange(undefined)}>
+                Remove goal
+              </Button>
+            </div>
+          </>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Says only what the projection can actually support. */
+function goalVerdict(progress: ReturnType<typeof goalProgress>, currency: Currency): string {
+  if (progress.onTrack && progress.reachedDate !== null) {
+    return `On track. The plan reaches this on ${formatIsoDate(progress.reachedDate)}.`;
+  }
+
+  if (progress.reachedDate !== null) {
+    return `Reached on ${formatIsoDate(progress.reachedDate)} — after your target date, so it arrives late.`;
+  }
+
+  const short = formatCents(progress.shortfallCents, currency);
+
+  if (progress.inconclusive) {
+    return `The target date is beyond this horizon, so this forecast cannot say whether you will get there. You are ${short} short by the end of the projection.`;
+  }
+
+  return `Not on track — ${short} short by ${formatIsoDate(progress.goal.targetDate)}. Lower the target, push the date, or set more aside.`;
 }
 
 /** The engraved label register the KPI cards use, sized for a card body. */

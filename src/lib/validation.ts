@@ -115,6 +115,12 @@ export const invoiceSchema = z.object({
   recurrence: invoiceRecurrenceSchema,
 });
 
+export const forecastGoalSchema = z.object({
+  label: requiredText(60, "Give the goal a name"),
+  targetCents: positiveAmountCentsSchema,
+  targetDate: isoDateSchema,
+});
+
 export const forecastSchema = z.object({
   id: z.string().min(1),
   name: requiredText(80, "Give your forecast a name"),
@@ -125,6 +131,8 @@ export const forecastSchema = z.object({
   startDate: isoDateSchema,
   horizon: horizonSchema,
   notes: trimmed(500, "Notes are too long").optional(),
+  // Optional, so a forecast saved or exported before goals existed still loads.
+  goal: forecastGoalSchema.optional(),
   recurringItems: z.array(recurringItemSchema).max(200, "Too many recurring items"),
   oneOffItems: z.array(oneOffItemSchema).max(400, "Too many one-off items"),
   invoices: z.array(invoiceSchema).max(200, "Too many invoices"),
