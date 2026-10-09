@@ -35,6 +35,14 @@ type CategoryInput = Omit<CategorySuggestion, "isTransfer"> & { isTransfer?: boo
 
 const BOTH: readonly ForecastKind[] = ["PERSONAL", "BUSINESS"];
 
+/**
+ * The tax outflow, named once.
+ *
+ * The savings view reports tax apart from spending — it is neither a
+ * discretionary choice nor money kept — and both places must agree on the label.
+ */
+export const TAX_CATEGORY = "Tax";
+
 /** Defaults `isTransfer` to false so only the balance-sheet movements set it. */
 const CATEGORY_INPUTS: readonly CategoryInput[] = [
   /* ------------------------------------------------------------- personal -- */
@@ -89,7 +97,7 @@ const CATEGORY_INPUTS: readonly CategoryInput[] = [
   { label: "Events", emoji: "🎪", kinds: ["BUSINESS"], direction: "OUTFLOW" },
 
   /* ----------------------------------------------------------------- both -- */
-  { label: "Tax", emoji: "🧾", kinds: BOTH, direction: "OUTFLOW" },
+  { label: TAX_CATEGORY, emoji: "🧾", kinds: BOTH, direction: "OUTFLOW" },
   { label: "Travel", emoji: "✈️", kinds: BOTH, direction: "OUTFLOW" },
   { label: "Education", emoji: "🎓", kinds: BOTH, direction: "OUTFLOW" },
   // Invoices arrive with this category from the engine, so it must resolve.

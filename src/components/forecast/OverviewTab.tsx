@@ -65,13 +65,6 @@ export function OverviewTab({ forecast, projection }: OverviewTabProps) {
         <CategoryBreakdown projection={projection} currency={forecast.currency} variant="spending" />
         <CategoryBreakdown projection={projection} currency={forecast.currency} variant="income" />
       </div>
-
-      {/*
-       * Rendered even when empty: the empty state is what tells a new user that
-       * Savings, Investing, Pension and Debt repayment are treated as kept money
-       * rather than spending.
-       */}
-      <CategoryBreakdown projection={projection} currency={forecast.currency} variant="transfers" />
     </div>
   );
 }

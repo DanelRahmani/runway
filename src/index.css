@@ -67,6 +67,20 @@
   --chart-balance: #1c1917;
   --chart-scenario: #4a0e0e;
 
+  /*
+   * Categorical scale for the donuts, kept in the same warm register as the rest
+   * of the palette — earth, clay, sage — rather than a rainbow, which would fight
+   * the editorial tone. Six is the practical ceiling: past that the slices stop
+   * being tellable apart. Colour is never the only signal; every slice carries a
+   * label and a percentage in the legend beside it.
+   */
+  --chart-1: #4a0e0e;
+  --chart-2: #3d6b4a;
+  --chart-3: #a8823c;
+  --chart-4: #45606b;
+  --chart-5: #a3563c;
+  --chart-6: #6b4157;
+
   /* Maroon-tinted shadows: never neutral grey on creme. */
   --shadow-tint: rgba(74, 14, 14, 0.08);
   --shadow-tint-strong: rgba(74, 14, 14, 0.14);
@@ -113,6 +127,14 @@
   --chart-balance: #f4efea;
   --chart-scenario: #d43d55;
 
+  /* Lifted for the aubergine ground; same order as light, so a slice keeps its identity. */
+  --chart-1: #d43d55;
+  --chart-2: #82b892;
+  --chart-3: #d9b26a;
+  --chart-4: #8fb0bd;
+  --chart-5: #d98f6a;
+  --chart-6: #b98aa8;
+
   --shadow-tint: rgba(212, 61, 85, 0.1);
   --shadow-tint-strong: rgba(212, 61, 85, 0.16);
 }
@@ -152,6 +174,12 @@
   --color-negative-muted: var(--negative-muted);
   --color-chart-balance: var(--chart-balance);
   --color-chart-scenario: var(--chart-scenario);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
 
   --font-display:
     "Bodoni Moda Variable", "Bodoni Moda", Didot, "Times New Roman", Georgia, serif;

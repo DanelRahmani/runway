@@ -23,6 +23,7 @@ import { OneOffTab } from "@/components/forecast/OneOffTab";
 import { OverviewTab } from "@/components/forecast/OverviewTab";
 import { RecurringTab } from "@/components/forecast/RecurringTab";
 import { SaveIndicator } from "@/components/forecast/SaveIndicator";
+import { SavingsTab } from "@/components/forecast/SavingsTab";
 import { ScenariosTab } from "@/components/forecast/ScenariosTab";
 import { Alert, AlertDescription, AlertIcon, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -34,11 +35,21 @@ import { runProjection } from "@/lib/forecast/engine";
 import { KIND_LABELS } from "@/lib/sample";
 import { deleteForecast, duplicateForecast, useForecasts } from "@/lib/storage/forecasts";
 
-const TABS = ["overview", "recurring", "one-off", "invoices", "scenarios", "assumptions", "data"] as const;
+const TABS = [
+  "overview",
+  "savings",
+  "recurring",
+  "one-off",
+  "invoices",
+  "scenarios",
+  "assumptions",
+  "data",
+] as const;
 type TabValue = (typeof TABS)[number];
 
 const TAB_LABELS: Record<TabValue, string> = {
   overview: "Overview",
+  savings: "Savings",
   recurring: "Recurring",
   "one-off": "One-off",
   invoices: "Invoices",
@@ -268,6 +279,12 @@ export function ForecastPage() {
         <TabsContent value="overview">
           <ErrorBoundary label="the projection">
             <OverviewTab forecast={forecast} projection={projection} />
+          </ErrorBoundary>
+        </TabsContent>
+
+        <TabsContent value="savings">
+          <ErrorBoundary label="the savings view">
+            <SavingsTab forecast={forecast} projection={projection} />
           </ErrorBoundary>
         </TabsContent>
 
