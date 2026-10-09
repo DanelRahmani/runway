@@ -89,14 +89,24 @@ A dedicated **Savings** tab, which reports *flows* rather than balances:
   netting huurtoeslag off the rent would flatter the spending figures instead of showing income
   beside them. Dutch names are used where there is no unambiguous English one.
 - **Where the money sits** — add, edit and remove savings, investment, debt or extra cash accounts,
-  each with a starting balance and an optional annual rate. Editing reuses the add form rather than
-  opening a second one, and keeps the account's id so transfers already pointing at it still do.
-  Spendable cash and total wealth are reported separately, because cash is what decides whether you
-  run out.
+  each with a starting balance and an optional annual rate **as a percentage** (the form says so, and
+  the rate is printed back on the account row next to the growth it produced). Editing reuses the add
+  form rather than opening a second one, and keeps the account's id so transfers already pointing at
+  it still do. Spendable cash and total wealth are reported separately, because cash is what decides
+  whether you run out.
 - **Every pot over time** — a line per account across the whole horizon, so a rate typed into a form
   becomes a curve you can read. The spending account is left off deliberately: it already has its own
   chart, and on most forecasts it swings by more across a year than the pots hold between them, which
   would flatten every growth curve into a straight line.
+- **Isolate one account** by clicking it in the legend; click it again, or click *All*, to go back.
+  A single choice rather than one switch per line, because the question is "how is *this* one doing"
+  and hiding the other four to answer it is four clicks instead of one. Colours follow the account, so
+  a line does not change colour when its neighbours are hidden.
+- **Where the change came from** — a breakdown under the chart splitting the change over the horizon
+  into money you moved in and money the annual rate added. Opening balances are excluded, so day one
+  is flat and the two bands are the whole story. Read across every account, moving money from spending
+  into savings nets out — it never left the household — so only the rate moves the paid-in band; read
+  on a single pot, that same transfer shows as paid in. That difference is the point of isolating it.
 - **Assigned transfers are two-sided.** Tag an item as Savings, Investing, Pension or Debt repayment
   and choose which account it goes into: your spending money drops and your wealth does not, so kept
   money stops looking spent.

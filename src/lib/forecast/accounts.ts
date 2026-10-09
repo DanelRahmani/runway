@@ -48,6 +48,14 @@ export interface AccountSeriesPoint {
   date: IsoDate;
   /** Closing balance for every account id, including the spending account. */
   cents: Record<string, number>;
+  /**
+   * Growth credited to every account id by this date, as a running total.
+   *
+   * Kept alongside the balance rather than derived from it, because the two cannot
+   * be told apart afterwards: a balance that rose by 40,000 cents says nothing
+   * about how much of that the user paid in and how much the rate credited.
+   */
+  growthCents: Record<string, number>;
 }
 
 export interface AccountProjection {
@@ -77,6 +85,53 @@ export type GrowthRow = { date: IsoDate } & Record<string, number | string>;
  */
 export function growthRows(series: readonly AccountSeriesPoint[]): GrowthRow[] {
   return series.map((point) => ({ date: point.date, ...point.cents }));
+}
+
+export interface BreakdownPoint {
+  date: IsoDate;
+  /** Paid in from the user's own spending money. */
+  contributionsCents: number;
+  /** Credited, or charged, by the annual rate. */
+  growthCents: number;
+  /** The two together: how much these accounts changed since the start date. */
+  totalCents: number;
+}
+
+/**
+ * Splits the change in a set of accounts into what the user paid in and what the
+ * rate did.
+ *
+ * Opening balances are left out, so the stack starts at zero and the two bands are
+ * the whole story of the horizon. Folding them in would be worse than incomplete:
+ * on a debt account the rate works backwards, and a negative band is the honest
+ * picture of what a rate does to a loan that averaging it away would hide.
+ *
+ * `contributions + growth` therefore equals each account's `netFlowCents` plus its
+ * `growthCents`, which is what makes these bands checkable against the summaries.
+ */
+export function breakdownSeries(
+  series: readonly AccountSeriesPoint[],
+  accounts: readonly Account[],
+): BreakdownPoint[] {
+  return series.map((point) => {
+    let contributionsCents = 0;
+    let growthCents = 0;
+
+    for (const account of accounts) {
+      const credited = point.growthCents[account.id] ?? 0;
+      const balance = point.cents[account.id] ?? account.startingBalanceCents;
+
+      growthCents += credited;
+      contributionsCents += balance - account.startingBalanceCents - credited;
+    }
+
+    return {
+      date: point.date,
+      contributionsCents,
+      growthCents,
+      totalCents: contributionsCents + growthCents,
+    };
+  });
 }
 
 /** Where each transfer's money is headed, keyed by `source:id`. */
@@ -172,7 +227,11 @@ export function accountProjection(forecast: Forecast, projection: Projection): A
       balances.set(SPENDING_ACCOUNT_ID, (balances.get(SPENDING_ACCOUNT_ID) ?? 0) + signed);
     }
 
-    series.push({ date: day.date, cents: Object.fromEntries(balances) });
+    series.push({
+      date: day.date,
+      cents: Object.fromEntries(balances),
+      growthCents: Object.fromEntries(growth),
+    });
   }
 
   const summaries: AccountSummary[] = accounts.map((account) => {

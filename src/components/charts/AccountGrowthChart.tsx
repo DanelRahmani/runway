@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   CartesianGrid,
   Line,
@@ -11,14 +11,23 @@ import {
 } from "recharts";
 
 import {
+  AccountBreakdownChart,
+  AccountBreakdownLegend,
+} from "@/components/charts/AccountBreakdownChart";
+import {
   CHART_COLORS,
   boundsOf,
   paddedDomain,
   seriesColor,
 } from "@/components/charts/chart-utils";
-import { growthRows, type AccountSeriesPoint } from "@/lib/forecast/accounts";
+import {
+  breakdownSeries,
+  growthRows,
+  type AccountSeriesPoint,
+} from "@/lib/forecast/accounts";
 import { formatIsoDate } from "@/lib/dates";
 import { formatCents, formatCentsTick } from "@/lib/money";
+import { cn } from "@/lib/utils";
 import type { Account, Currency } from "@/types/forecast";
 
 interface AccountGrowthChartProps {
@@ -52,18 +61,39 @@ export function AccountGrowthChart({
   currency,
   height = 260,
 }: AccountGrowthChartProps) {
+  /**
+   * One account isolated, or `null` for all of them.
+   *
+   * A single choice rather than one switch per line: the question people actually
+   * ask is "how is *this* one doing", and hiding the other four to answer it is
+   * four clicks rather than one.
+   */
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const shown = useMemo(
+    () => (selectedId === null ? accounts : accounts.filter((a) => a.id === selectedId)),
+    [accounts, selectedId],
+  );
+
   /*
    * Flattened once, because every line below reads its `dataKey` off the top level
    * of a row. `growthRows` owns that shape so it can be tested without a browser.
    */
   const data = useMemo(() => growthRows(series), [series]);
 
-  const ids = useMemo(() => accounts.map((account) => account.id), [accounts]);
+  const ids = useMemo(() => shown.map((account) => account.id), [shown]);
 
   const domain = useMemo(
     () => paddedDomain(boundsOf(series.flatMap((point) => ids.map((id) => point.cents[id])))),
     [series, ids],
   );
+
+  const breakdown = useMemo(() => breakdownSeries(series, shown), [series, shown]);
+
+  const selectedName =
+    selectedId === null
+      ? null
+      : (accounts.find((account) => account.id === selectedId)?.name ?? null);
 
   if (accounts.length === 0) {
     return (
@@ -89,7 +119,7 @@ export function AccountGrowthChart({
         style={{ height }}
         className="w-full"
         role="img"
-        aria-label={`Balance of each account over time${range}. Closing balances and growth are listed above.`}
+        aria-label={`Balance of ${selectedName ?? "each account"} over time${range}. Closing balances and growth are listed above.`}
       >
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 12, right: 16, bottom: 4, left: 4 }}>
@@ -126,13 +156,15 @@ export function AccountGrowthChart({
               strokeDasharray="4 3"
             />
 
-            {accounts.map((account, index) => (
+            {shown.map((account) => (
               <Line
                 key={account.id}
                 type="monotone"
                 dataKey={account.id}
                 name={account.name}
-                stroke={seriesColor(index)}
+                /* Colour comes from the account's place in the full list, so a
+                   line keeps its colour when another is isolated. */
+                stroke={seriesColor(accounts.indexOf(account))}
                 strokeWidth={2}
                 dot={false}
                 isAnimationActive={false}
@@ -142,19 +174,72 @@ export function AccountGrowthChart({
         </ResponsiveContainer>
       </div>
 
-      <ul className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
-        {accounts.map((account, index) => (
-          <li key={account.id} className="flex items-center gap-1.5">
+      <ul className="flex flex-wrap items-center gap-1.5">
+        <LegendButton selected={selectedId === null} onClick={() => setSelectedId(null)}>
+          All
+        </LegendButton>
+        {accounts.map((account) => (
+          <LegendButton
+            key={account.id}
+            selected={selectedId === account.id}
+            onClick={() => setSelectedId(selectedId === account.id ? null : account.id)}
+          >
             <span
-              className="inline-block size-2.5 rounded-full"
-              style={{ backgroundColor: seriesColor(index) }}
+              className="inline-block size-2.5 shrink-0 rounded-full"
+              style={{ backgroundColor: seriesColor(accounts.indexOf(account)) }}
               aria-hidden="true"
             />
             {account.name}
-          </li>
+          </LegendButton>
         ))}
       </ul>
+
+      <div className="mt-1 flex flex-col gap-3 border-t pt-4">
+        <div className="flex flex-col gap-1">
+          <p className="text-sm font-medium">
+            {selectedName === null ? "Where the change came from" : `Where ${selectedName}'s change came from`}
+          </p>
+          <p className="text-muted-foreground text-xs leading-relaxed">
+            Money you moved in, stacked under money the annual rate added. Together they are how
+            much the balance changed over the horizon — the opening balance is not part of it.
+          </p>
+        </div>
+        <AccountBreakdownChart
+          data={breakdown}
+          currency={currency}
+          subject={selectedName ?? "these accounts"}
+        />
+        <AccountBreakdownLegend />
+      </div>
     </div>
+  );
+}
+
+/** A legend entry that isolates its account. `aria-pressed` carries the state. */
+function LegendButton({
+  selected,
+  onClick,
+  children,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <li>
+      <button
+        type="button"
+        aria-pressed={selected}
+        onClick={onClick}
+        className={cn(
+          "text-muted-foreground flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors",
+          "hover:text-foreground focus-visible:ring-ring/40 focus-visible:outline-none focus-visible:ring-[3px]",
+          selected && "border-foreground/25 bg-muted text-foreground",
+        )}
+      >
+        {children}
+      </button>
+    </li>
   );
 }
 

@@ -153,6 +153,7 @@ export function AccountsPanel({
               key={entry.account.id}
               name={entry.account.name}
               kind={entry.account.kind}
+              rateBps={entry.account.annualRateBps ?? 0}
               closingCents={entry.closingCents}
               growthCents={entry.growthCents}
               currency={currency}
@@ -226,16 +227,17 @@ export function AccountsPanel({
                 />
               </Field>
               <Field
-                label="Annual rate"
+                label="Annual rate (%)"
                 htmlFor="account-rate"
                 error={rateValid ? undefined : "Use a rate between -20% and 20%"}
-                hint="Percent a year. Leave at 0 for none."
+                hint="A percentage a year: 5 means 5%. Leave at 0 for no growth."
               >
                 <Input
                   id="account-rate"
                   value={ratePercent}
                   inputMode="decimal"
                   autoComplete="off"
+                  placeholder="0"
                   onChange={(event) => setRatePercent(event.target.value)}
                 />
               </Field>
@@ -266,6 +268,7 @@ export function AccountsPanel({
 function AccountRow({
   name,
   kind,
+  rateBps = 0,
   closingCents,
   growthCents,
   currency,
@@ -276,6 +279,8 @@ function AccountRow({
 }: {
   name: string;
   kind: AccountKind;
+  /** Annual rate in basis points, shown as a percentage. */
+  rateBps?: number;
   closingCents: number;
   growthCents: number;
   currency: Currency;
@@ -298,6 +303,14 @@ function AccountRow({
         <span className="text-muted-foreground font-mono text-[0.625rem] tracking-wide uppercase">
           {accountKindLabel(kind)}
         </span>
+        {/* Named as a percentage right where the growth figure is read, so the
+            rate behind that figure is never a mystery. Rendered as typed, so it
+            matches what the form shows. */}
+        {rateBps !== 0 ? (
+          <span className="text-muted-foreground tnum text-[0.6875rem] whitespace-nowrap">
+            {rateBps / BPS_PER_PERCENT}% a year
+          </span>
+        ) : null}
       </span>
       <span className="flex shrink-0 items-center gap-3">
         {growthCents !== 0 ? (

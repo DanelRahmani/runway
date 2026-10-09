@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { accountProjection, accountsFor, growthRows, SPENDING_ACCOUNT_ID } from "@/lib/forecast/accounts";
+import {
+  accountProjection,
+  accountsFor,
+  breakdownSeries,
+  growthRows,
+  SPENDING_ACCOUNT_ID,
+} from "@/lib/forecast/accounts";
 import { runProjection } from "@/lib/forecast/engine";
 import type { Account, Forecast, IsoDate, OneOffItem, RecurringItem } from "@/types/forecast";
 
@@ -241,5 +247,78 @@ describe("growth rows for the chart", () => {
 
     // The last row has to sit above the first, or the rate is not reaching the chart.
     expect(last?.["savings"]).toBeGreaterThan(500_000);
+  });
+});
+
+/*
+ * The breakdown chart splits the change in a set of accounts into money the user
+ * moved and money the rate moved. It is computed from the series' own growth
+ * snapshot, while the summaries compute the same quantities from a second set of
+ * running totals — so checking one against the other is a real cross-check rather
+ * than a restatement of the formula.
+ */
+describe("contributions and growth breakdown", () => {
+  it("agrees with the account summaries it is derived from", () => {
+    const forecast = makeForecast({
+      accounts: [pot({ startingBalanceCents: 500_000, annualRateBps: 600 })],
+      recurringItems: [
+        recurring(20_000, "Savings", { direction: "OUTFLOW", accountId: "savings" }),
+      ],
+    });
+    const projection = accountProjection(forecast, runProjection(forecast));
+
+    const last = breakdownSeries(projection.series, accountsFor(forecast)).at(-1);
+    const credited = projection.accounts.reduce((sum, entry) => sum + entry.growthCents, 0);
+    const flowed = projection.accounts.reduce((sum, entry) => sum + entry.netFlowCents, 0);
+
+    expect(last?.growthCents).toBe(credited);
+    expect(last?.contributionsCents).toBe(flowed);
+    expect(last?.totalCents).toBe(credited + flowed);
+  });
+
+  it("nets a transfer between the user's own accounts out of the paid-in band", () => {
+    const forecast = makeForecast({
+      accounts: [pot({ startingBalanceCents: 300_000, annualRateBps: 1_200 })],
+      oneOffItems: [oneOff(50_000, "Savings", "2026-01-05", "savings")],
+    });
+    const projection = accountProjection(forecast, runProjection(forecast));
+    const savings = forecast.accounts?.[0];
+
+    const all = breakdownSeries(projection.series, accountsFor(forecast));
+    const alone = breakdownSeries(projection.series, savings === undefined ? [] : [savings]);
+
+    // Opening balances are excluded, so day one is flat in both bands.
+    expect(all[0]?.contributionsCents).toBe(0);
+    expect(all[0]?.growthCents).toBe(0);
+
+    /*
+     * Across every account, moving 50,000 from spending into savings is not paying
+     * anything in: the money never left the household. Only the rate can change
+     * total wealth, so only the rate may move that band.
+     */
+    expect(all.at(-1)?.contributionsCents).toBe(0);
+    expect(all.at(-1)?.growthCents).toBeGreaterThan(0);
+
+    // Seen on its own, the pot did receive it — which is what isolating it is for.
+    expect(alone.at(-1)?.contributionsCents).toBe(50_000);
+    expect(alone.at(-1)?.growthCents).toBeGreaterThan(0);
+  });
+
+  it("narrows to one account when the chart isolates it", () => {
+    const forecast = makeForecast({
+      accounts: [
+        pot({ id: "savings", startingBalanceCents: 100_000, annualRateBps: 600 }),
+        pot({ id: "broker", name: "Broker", kind: "INVESTMENT", startingBalanceCents: 100_000 }),
+      ],
+      oneOffItems: [oneOff(25_000, "Savings", "2026-01-05", "savings")],
+    });
+    const projection = accountProjection(forecast, runProjection(forecast));
+    const broker = forecast.accounts?.find((account) => account.id === "broker");
+
+    const alone = breakdownSeries(projection.series, broker === undefined ? [] : [broker]).at(-1);
+
+    // The broker has no rate and no payments, so isolating it is a flat nothing.
+    expect(alone?.contributionsCents).toBe(0);
+    expect(alone?.growthCents).toBe(0);
   });
 });
