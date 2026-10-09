@@ -1,4 +1,11 @@
-import { endOfMonth, formatIsoDate, formatMonthKey, startOfMonth, startOfWeek } from "@/lib/dates";
+import {
+  daysBetween,
+  endOfMonth,
+  formatIsoDate,
+  formatMonthKey,
+  startOfMonth,
+  startOfWeek,
+} from "@/lib/dates";
 import type { Granularity, IsoDate, ProjectionDay, ProjectionPeriod } from "@/types/forecast";
 
 /**
@@ -101,6 +108,33 @@ export function alignSeries(
   }));
 }
 
-export function periodEndOfMonth(period: ProjectionPeriod): IsoDate {
-  return endOfMonth(period.endDate);
+/** Days in a full ISO week, for spotting a period that covers less than one. */
+const DAYS_PER_WEEK = 7;
+
+/** How many days a period actually covers, inclusive of both ends. */
+export function periodDayCount(period: ProjectionPeriod): number {
+  return daysBetween(period.startDate, period.endDate) + 1;
+}
+
+/**
+ * True when a period covers less than a whole week or month.
+ *
+ * The first and last periods of a horizon usually do: a twelve-month forecast
+ * starting on the 10th opens with a three-week October and closes with a nine-day
+ * one. Their totals are real money, but they are not comparable with a full
+ * period's — and a nine-day October that reports no salary at all reads as a bug
+ * until the row says it is nine days long.
+ */
+export function isPartialPeriod(period: ProjectionPeriod, granularity: Granularity): boolean {
+  switch (granularity) {
+    case "daily":
+      return false;
+    case "weekly":
+      return periodDayCount(period) !== DAYS_PER_WEEK;
+    case "monthly":
+      return (
+        period.startDate !== startOfMonth(period.startDate) ||
+        period.endDate !== endOfMonth(period.endDate)
+      );
+  }
 }

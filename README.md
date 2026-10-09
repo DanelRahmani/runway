@@ -60,7 +60,12 @@ the curve, because that is what actually happens to your cash.
   the zero line is always drawn
 - **Daily / weekly / monthly** toggle for both the chart and the table
 - **Cash-flow table** — opening balance, inflows, outflows, net movement and closing balance per
-  period, downloadable as CSV
+  period, downloadable as CSV. Totals move from period to period for two ordinary reasons, and the
+  table says which apply rather than leaving them to look like faults: the first and last periods of a
+  horizon cover only part of one (they carry a day count so a nine-day October reporting no salary is
+  visibly nine days), and anything repeating faster than the period lands four times in some and five
+  in others. A losing period shows a negative **net**; inflows and outflows themselves are never
+  negative, because an amount's sign is carried by the direction the user chose.
 - **Donuts** for composition — where income comes from, what you kept, and how the outflow splits
   between spending, tax and money kept. Capped at six slices and folded to "top 5 + Other"; the
   legend carries every figure, so colour is never the only signal.

@@ -16,7 +16,7 @@ import {
   TableRow,
   TableWrapper,
 } from "@/components/ui/table";
-import { aggregate } from "@/lib/forecast/aggregate";
+import { aggregate, isPartialPeriod, periodDayCount } from "@/lib/forecast/aggregate";
 import { categoryTotals } from "@/lib/forecast/engine";
 import { sumCategoryTotals } from "@/lib/categories";
 import { formatIsoDate, formatIsoDateRange } from "@/lib/dates";
@@ -34,6 +34,20 @@ export function OverviewTab({ forecast, projection }: OverviewTabProps) {
   const [granularity, setGranularity] = useState<Granularity>("weekly");
 
   const periods = aggregate(projection.days, granularity);
+
+  /*
+   * Whether anything repeats faster than the table's own periods. Weekly costs are
+   * charged four times in some months and five in others, which is the usual reason
+   * a column of monthly outflows does not hold still — so the table can say so
+   * rather than leaving it to look like an error.
+   */
+  const hasFastRepeats = useMemo(
+    () =>
+      forecast.recurringItems.some(
+        (item) => item.isActive && (item.frequency === "WEEKLY" || item.frequency === "BIWEEKLY"),
+      ),
+    [forecast.recurringItems],
+  );
 
   // Income runs to a handful of categories at most, which is what makes a donut
   // readable here — unlike the twenty-category spending list beside it.
@@ -69,7 +83,12 @@ export function OverviewTab({ forecast, projection }: OverviewTabProps) {
         }
       />
 
-      <ProjectionTable periods={periods} currency={forecast.currency} granularity={granularity} />
+      <ProjectionTable
+        periods={periods}
+        currency={forecast.currency}
+        granularity={granularity}
+        hasFastRepeats={hasFastRepeats}
+      />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <CategoryBreakdown projection={projection} currency={forecast.currency} />
@@ -101,12 +120,17 @@ export function ProjectionTable({
   periods,
   currency,
   granularity,
+  hasFastRepeats = false,
 }: {
   periods: readonly ProjectionPeriod[];
   currency: Forecast["currency"];
   granularity: Granularity;
+  /** Whether the forecast repeats anything faster than a period, so totals move. */
+  hasFastRepeats?: boolean;
 }) {
   const label = granularity === "daily" ? "Day" : granularity === "weekly" ? "Week" : "Month";
+  const partials = periods.filter((period) => isPartialPeriod(period, granularity));
+  const showNote = granularity !== "daily" && (partials.length > 0 || hasFastRepeats);
 
   return (
     <Card>
@@ -133,9 +157,18 @@ export function ProjectionTable({
               {periods.map((period) => (
                 <TableRow key={period.key}>
                   <TableCell className="text-muted-foreground text-xs">
-                    {granularity === "daily"
-                      ? formatIsoDate(period.startDate)
-                      : formatIsoDateRange(period.startDate, period.endDate)}
+                    <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      {granularity === "daily"
+                        ? formatIsoDate(period.startDate)
+                        : formatIsoDateRange(period.startDate, period.endDate)}
+                      {/* The count is what makes a short period obvious: a month that
+                          reports no income is not broken, it is nine days long. */}
+                      {isPartialPeriod(period, granularity) ? (
+                        <span className="text-[0.625rem] tracking-wide whitespace-nowrap uppercase">
+                          {periodDayCount(period)} days
+                        </span>
+                      ) : null}
+                    </span>
                   </TableCell>
                   <TableCell className="tnum text-right">
                     {formatCents(period.openingCents, currency)}
@@ -167,6 +200,23 @@ export function ProjectionTable({
             </TableBody>
           </Table>
         </TableWrapper>
+
+        {/*
+         * Both of these are ordinary arithmetic rather than faults, and both look
+         * like faults without a sentence saying so. The first and last periods of a
+         * horizon cover only part of one; anything repeating faster than the period
+         * lands four or five times, so its column does not hold still.
+         */}
+        {showNote ? (
+          <p className="text-muted-foreground mt-3 text-xs leading-relaxed">
+            {partials.length > 0
+              ? `The ${partials.length === 1 ? "row marked" : "rows marked"} with a day count ${partials.length === 1 ? "covers" : "cover"} only part of a ${label.toLowerCase()}, because the horizon starts or ends inside it — so those totals are smaller than a full one, not smaller than expected. `
+              : null}
+            {hasFastRepeats
+              ? "Anything repeating faster than this — a weekly cost in a monthly table — is charged four times in some periods and five in others."
+              : null}
+          </p>
+        ) : null}
       </CardContent>
     </Card>
   );
