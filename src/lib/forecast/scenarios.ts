@@ -1,9 +1,10 @@
+import { isTransferCategory, TAX_CATEGORY } from "@/lib/categories";
 import { addMonths, daysBetween } from "@/lib/dates";
 import { alignSeries } from "@/lib/forecast/aggregate";
 import { runProjection } from "@/lib/forecast/engine";
 import { formatCents } from "@/lib/money";
 import { createId } from "@/lib/utils";
-import type { Currency, Forecast, ScenarioDiff } from "@/types/forecast";
+import type { Currency, Forecast, ForecastKind, ScenarioDiff } from "@/types/forecast";
 
 /**
  * Scenario modelling.
@@ -16,6 +17,14 @@ import type { Currency, Forecast, ScenarioDiff } from "@/types/forecast";
 
 export interface ScenarioPreset {
   id: string;
+  /**
+   * Which kinds of forecast the question makes sense for.
+   *
+   * A household raises no invoices, so "largest client pays 30 days late" is not
+   * a question it can be asked. Filtering here rather than hiding the tab is what
+   * lets one page serve both kinds — see `scenarioPresets`.
+   */
+  kinds: readonly ForecastKind[];
   /**
    * Takes the forecast currency because two of these name an amount.
    *
@@ -32,6 +41,10 @@ export interface ScenarioPreset {
 const HIRE_CENTS = 150_000;
 const LAPTOP_CENTS = 200_000;
 
+const FOR_BUSINESS: readonly ForecastKind[] = ["BUSINESS"];
+const FOR_HOUSEHOLDS: readonly ForecastKind[] = ["PERSONAL"];
+const FOR_BOTH: readonly ForecastKind[] = ["PERSONAL", "BUSINESS"];
+
 function copy(forecast: Forecast, label: string, changed: Partial<Forecast>): Forecast {
   return {
     ...forecast,
@@ -44,6 +57,7 @@ function copy(forecast: Forecast, label: string, changed: Partial<Forecast>): Fo
 export const SCENARIO_PRESETS: readonly ScenarioPreset[] = [
   {
     id: "client-30-days-late",
+    kinds: FOR_BUSINESS,
     label: () => "Largest client pays 30 days late",
     description: () => "Adds 30 days to the payment delay on the biggest expected invoice.",
     apply: (forecast) => {
@@ -65,6 +79,7 @@ export const SCENARIO_PRESETS: readonly ScenarioPreset[] = [
   },
   {
     id: "lose-monthly-client",
+    kinds: FOR_BUSINESS,
     label: () => "Lose a monthly client",
     description: () => "Switches off the largest monthly recurring income.",
     apply: (forecast) => {
@@ -86,6 +101,7 @@ export const SCENARIO_PRESETS: readonly ScenarioPreset[] = [
   },
   {
     id: "hire-1500-per-month",
+    kinds: FOR_BUSINESS,
     label: (currency) =>
       `Hire someone for ${formatCents(HIRE_CENTS, currency)} per month`,
     description: (currency) =>
@@ -117,6 +133,7 @@ export const SCENARIO_PRESETS: readonly ScenarioPreset[] = [
   },
   {
     id: "buy-2000-laptop",
+    kinds: FOR_BOTH,
     label: (currency) => `Buy a ${formatCents(LAPTOP_CENTS, currency)} laptop next month`,
     description: (currency) =>
       `Adds a one-off equipment purchase of ${formatCents(LAPTOP_CENTS, currency)} one month after the start date.`,
@@ -140,7 +157,79 @@ export const SCENARIO_PRESETS: readonly ScenarioPreset[] = [
         },
       ),
   },
+  {
+    id: "biggest-cost-up-5",
+    kinds: FOR_HOUSEHOLDS,
+    label: () => "Biggest monthly cost rises 5%",
+    description: () =>
+      "Raises the largest active monthly cost by 5% — the shape of a rent or energy increase.",
+    apply: (forecast) => {
+      // Anchored on "the largest monthly cost" rather than on a category name, so
+      // no preset hard-codes a taxonomy label that could be renamed underneath it.
+      const monthly = forecast.recurringItems.filter(
+        (item) => item.isActive && item.direction === "OUTFLOW" && item.frequency === "MONTHLY",
+      );
+      if (monthly.length === 0) return null;
+
+      const largest = monthly.reduce((best, item) =>
+        item.amountCents > best.amountCents ? item : best,
+      );
+
+      return copy(forecast, "Biggest monthly cost rises 5%", {
+        recurringItems: forecast.recurringItems.map((item) =>
+          item.id === largest.id
+            ? { ...item, amountCents: Math.round(item.amountCents * 1.05) }
+            : item,
+        ),
+      });
+    },
+  },
+  {
+    id: "running-costs-up-10",
+    kinds: FOR_HOUSEHOLDS,
+    label: () => "Everything costs 10% more",
+    description: () =>
+      "Raises every active running cost by 10%. Savings transfers and tax are left alone — neither is a cost of living.",
+    apply: (forecast) => {
+      const scaled = forecast.recurringItems.map((item) =>
+        item.isActive && item.direction === "OUTFLOW" && isRunningCost(item.category)
+          ? { ...item, amountCents: Math.round(item.amountCents * 1.1) }
+          : item,
+      );
+
+      // Nothing moved, so there is no scenario worth storing.
+      const changed = scaled.some(
+        (item, index) => item.amountCents !== forecast.recurringItems[index]?.amountCents,
+      );
+      if (!changed) return null;
+
+      return copy(forecast, "Everything costs 10% more", { recurringItems: scaled });
+    },
+  },
 ];
+
+/**
+ * A cost of living, as opposed to money moved or tax set aside.
+ *
+ * The same partition `savingsSummary` uses, so "costs" means the same thing in
+ * both places. An uncategorised outflow counts: the user did not say it was a
+ * transfer, and quietly leaving it out would understate the increase.
+ */
+function isRunningCost(category: string | undefined): boolean {
+  if (category === undefined) return true;
+  return category !== TAX_CATEGORY && !isTransferCategory(category);
+}
+
+/**
+ * The presets that make sense for a given kind of forecast.
+ *
+ * A forecast saved before the kind existed gets everything, matching how the
+ * category and name pickers treat an unknown kind.
+ */
+export function scenarioPresets(kind: ForecastKind | undefined): readonly ScenarioPreset[] {
+  if (kind === undefined) return SCENARIO_PRESETS;
+  return SCENARIO_PRESETS.filter((preset) => preset.kinds.includes(kind));
+}
 
 /**
  * Difference between two projections.
@@ -213,10 +302,4 @@ export function describeScenarioImpact(diff: ScenarioDiff): string {
   return "Neither case runs out of cash within the horizon.";
 }
 
-/** Suggests a scenario name that does not collide with an existing forecast. */
-export function nextScenarioName(label: string, existingNames: readonly string[]): string {
-  if (!existingNames.includes(label)) return label;
-  let suffix = 2;
-  while (existingNames.includes(`${label} (${suffix})`)) suffix += 1;
-  return `${label} (${suffix})`;
-}
+/** Human-readable verdict for the scenario comparison header. */

@@ -198,6 +198,18 @@ describe("kept curve and goals", () => {
     expect(keptCurve(projection).at(-1)?.cumulativeCents).toBe(savingsSummary(projection).keptCents);
   });
 
+  it("exposes the row shape the goal chart reads", () => {
+    // GoalProgressChart plots `cumulativeCents` against the `date` axis. A wrong
+    // dataKey draws axes with no line and throws nothing, so the key contract is
+    // asserted here rather than left to the browser to reveal.
+    const row = keptCurve(runProjection(saver))[0];
+
+    expect(row).toBeDefined();
+    expect(Object.keys(row ?? {}).sort()).toEqual(["cumulativeCents", "date"]);
+    expect(typeof row?.date).toBe("string");
+    expect(typeof row?.cumulativeCents).toBe("number");
+  });
+
   it("counts only transfers, not spending", () => {
     // One-off items, so the totals are exactly what is written here. A recurring
     // item would fire several times across the horizon and make the assertion a

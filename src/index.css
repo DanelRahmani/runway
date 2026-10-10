@@ -451,3 +451,27 @@
     scrollbar-width: thin;
   }
 }
+
+/*
+ * Printing.
+ *
+ * Only the forecast one-pager prints: the app shell is `print:hidden` and
+ * `PrintSummary` portals itself onto `document.body`, where it is `hidden` on
+ * screen and `print:block` here. White page, real margins, and no entrance
+ * animation frozen mid-flight.
+ */
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  html,
+  body {
+    background: #fff;
+  }
+
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -1,6 +1,6 @@
 import { addDays, todayIso } from "@/lib/dates";
 import { createId } from "@/lib/utils";
-import type { Forecast, ForecastKind, IsoDate } from "@/types/forecast";
+import type { Forecast, ForecastKind, IsoDate, RecurringItem } from "@/types/forecast";
 
 /**
  * Starter forecasts.
@@ -28,6 +28,19 @@ export function defaultForecastName(kind: ForecastKind): string {
 
 export function createStarterForecast(kind: ForecastKind, startDate: IsoDate = todayIso()): Forecast {
   return kind === "PERSONAL" ? createPersonalStarter(startDate) : createBusinessStarter(startDate);
+}
+
+/**
+ * The household's usual recurring items, for a forecast that did not start from
+ * the starter.
+ *
+ * Taken from the personal starter rather than kept as a second list, so a
+ * template and a starter can never disagree about a name, an amount or a
+ * category. Ids are fresh on every call, so it can be applied to a forecast that
+ * already has items without the two colliding. Amounts are placeholders.
+ */
+export function householdRecurringItems(startDate: IsoDate = todayIso()): RecurringItem[] {
+  return createPersonalStarter(startDate).recurringItems;
 }
 
 /**

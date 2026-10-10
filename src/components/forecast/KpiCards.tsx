@@ -8,7 +8,8 @@ import type { CSSProperties, ReactNode } from "react";
 
 import { AnimatedMoney } from "@/components/forecast/AnimatedMoney";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatIsoDate } from "@/lib/dates";
+import { describeDays, formatIsoDate } from "@/lib/dates";
+import { runwayDays } from "@/lib/forecast/engine";
 import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import type { Currency, Projection } from "@/types/forecast";
@@ -68,6 +69,8 @@ export function KpiCards({
   const { summary } = projection;
   const netCents = summary.totalInflowCents - summary.totalOutflowCents;
   const runsOut = summary.cashOutDate !== null;
+  // Null when cash never runs out; the hint below is the only place it is read.
+  const runway = runwayDays(projection);
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -106,7 +109,7 @@ export function KpiCards({
         tone={runsOut ? "negative" : "positive"}
         hint={
           runsOut
-            ? `${summary.shortfallDays} day${summary.shortfallDays === 1 ? "" : "s"} below zero in this horizon`
+            ? `Runs out after ${describeDays(runway ?? 0)}; ${summary.shortfallDays} day${summary.shortfallDays === 1 ? "" : "s"} below zero in this horizon`
             : "Balance stays at or above zero for the whole horizon"
         }
         icon={runsOut ? <ArrowDownRightIcon className="size-3.5" /> : <CheckCircle2Icon className="size-3.5" />}

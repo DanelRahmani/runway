@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { categoryEmoji, categorySuggestions } from "@/lib/categories";
 import { ITEM_NAMES } from "@/lib/itemNames";
-import { createStarterForecast } from "@/lib/sample";
+import { createStarterForecast, householdRecurringItems } from "@/lib/sample";
 
 const labels = (kind: "PERSONAL" | "BUSINESS" | undefined, direction?: "INFLOW" | "OUTFLOW") =>
   categorySuggestions(kind, direction).map((category) => category.label);
@@ -75,6 +75,27 @@ describe("categories are scoped to the forecast kind", () => {
       for (const label of used) {
         expect(categoryEmoji(label), `${kind} starter uses "${label}"`).not.toBeNull();
       }
+    }
+  });
+
+  it("hands the household template a fresh list on every call", () => {
+    // The template is added to a forecast that may already have items, so two
+    // applications must not collide on ids — the engine keys items by id within a
+    // forecast, and a clash would make one item overwrite the other.
+    const first = householdRecurringItems("2026-01-01");
+    const second = householdRecurringItems("2026-01-01");
+
+    expect(first.length).toBeGreaterThan(0);
+    expect(first.map((item) => item.id)).not.toEqual(second.map((item) => item.id));
+
+    // Same list the personal starter is built from, so every category is one the
+    // household picker offers.
+    for (const item of first) {
+      if (item.category === undefined) continue;
+      expect(
+        categoryEmoji(item.category),
+        `household template uses "${item.category}"`,
+      ).not.toBeNull();
     }
   });
 });

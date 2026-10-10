@@ -91,10 +91,6 @@ export function addMonths(value: IsoDate, months: number): IsoDate {
   return makeIsoDate(targetYear, targetMonth, Math.min(day, daysInMonth(targetYear, targetMonth)));
 }
 
-export function addYears(value: IsoDate, years: number): IsoDate {
-  return addMonths(value, years * 12);
-}
-
 export function splitIsoDate(value: IsoDate): [number, number, number] {
   const match = ISO_DATE_RE.exec(value);
   if (!match) throw new RangeError(`Runway: "${value}" is not a valid ISO date`);
@@ -113,14 +109,6 @@ export function compareIsoDate(a: IsoDate, b: IsoDate): number {
 
 export function minIsoDate(a: IsoDate, b: IsoDate): IsoDate {
   return a <= b ? a : b;
-}
-
-export function maxIsoDate(a: IsoDate, b: IsoDate): IsoDate {
-  return a >= b ? a : b;
-}
-
-export function isWithinRange(value: IsoDate, start: IsoDate, end: IsoDate): boolean {
-  return value >= start && value <= end;
 }
 
 /** Monday-based start of the ISO week. */
@@ -157,8 +145,6 @@ export const HORIZON_LABELS: Record<Horizon, string> = {
   TWELVE_MONTHS: "12 months",
 };
 
-export const HORIZONS: readonly Horizon[] = ["THIRTEEN_WEEKS", "SIX_MONTHS", "TWELVE_MONTHS"];
-
 /**
  * Last day included in the projection.
  *
@@ -189,17 +175,6 @@ function monthsHorizonEnd(startDate: IsoDate, months: number): IsoDate {
   return addDays(anniversary, -1);
 }
 
-export function horizonDayCount(horizon: Horizon): number {
-  switch (horizon) {
-    case "THIRTEEN_WEEKS":
-      return 13 * 7;
-    case "SIX_MONTHS":
-      return 183;
-    case "TWELVE_MONTHS":
-      return 366;
-  }
-}
-
 /** `2026-03-29` → `29 Mar 2026`. Locale-aware but timezone-free. */
 export function formatIsoDate(value: IsoDate, locale?: string, withYear = true): string {
   const [year = 0, month = 1, day = 1] = splitIsoDate(value);
@@ -219,6 +194,21 @@ export function formatIsoDateRange(start: IsoDate, end: IsoDate, locale?: string
   return `${formatIsoDate(start, locale, false)} – ${formatIsoDate(end, locale)}`;
 }
 
+/** Average Gregorian month, for turning a day count into "about N months". */
+const DAYS_PER_MONTH = 30.4375;
+
+/**
+ * A day count in words a person can hold: `45 days`, `117 days (about 4 months)`.
+ *
+ * Used for runway length. The exact day count is always present, so the rounded
+ * month figure never hides how coarse it is.
+ */
+export function describeDays(days: number): string {
+  const whole = Math.round(days);
+  const unit = whole === 1 ? "day" : "days";
+  if (whole < 60) return `${whole} ${unit}`;
+  return `${whole} ${unit} (about ${Math.round(whole / DAYS_PER_MONTH)} months)`;
+}
 /** `2026-03` → `Mar 2026`. */
 export function formatMonthKey(value: IsoDate, locale?: string): string {
   return dateFormat(`month|${locale ?? ""}`, locale, {

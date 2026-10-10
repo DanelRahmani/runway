@@ -3,6 +3,7 @@ import { useState, useMemo } from "react";
 
 import { CategoryBreakdown } from "@/components/charts/CategoryBreakdown";
 import { BalanceChartPanel } from "@/components/forecast/BalanceChartPanel";
+import { CashCalendar } from "@/components/forecast/CashCalendar";
 import { DonutChart } from "@/components/charts/DonutChart";
 import { GranularityToggle } from "@/components/forecast/GranularityToggle";
 import { Button } from "@/components/ui/button";
@@ -89,6 +90,8 @@ export function OverviewTab({ forecast, projection }: OverviewTabProps) {
         granularity={granularity}
         hasFastRepeats={hasFastRepeats}
       />
+
+      <CashCalendar projection={projection} currency={forecast.currency} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <CategoryBreakdown projection={projection} currency={forecast.currency} />

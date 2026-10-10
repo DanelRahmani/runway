@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { aggregate } from "@/lib/forecast/aggregate";
+import { categoryTotals } from "@/lib/forecast/engine";
 import {
   allForecastsFilename,
   exportAllToFile,
+  exportCategoryTotalsToCsv,
   exportForecastToFile,
   exportProjectionToCsv,
   forecastFilename,
@@ -171,6 +173,32 @@ export function DataTab({ forecast, projection }: DataTabProps) {
                   >
                     <DownloadIcon />
                     Download CSV
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm font-medium">Category totals CSV</p>
+                  <p className="text-muted-foreground text-xs">
+                    Every category's movement across the horizon, largest first — the same breakdown
+                    the overview charts show, as a spreadsheet.
+                  </p>
+                </div>
+                <div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      exportCategoryTotalsToCsv(
+                        forecast.name,
+                        forecast.currency,
+                        categoryTotals(projection),
+                      )
+                    }
+                  >
+                    <DownloadIcon />
+                    Download categories
                   </Button>
                 </div>
               </div>

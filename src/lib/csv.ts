@@ -1,5 +1,5 @@
 import { formatCents } from "@/lib/money";
-import type { Currency, ProjectionPeriod } from "@/types/forecast";
+import type { CategoryTotal, Currency, ProjectionPeriod } from "@/types/forecast";
 
 /**
  * CSV generation.
@@ -55,6 +55,30 @@ export function periodsToCsv(
       money(period.outflowCents),
       money(period.netCents),
       money(period.closingCents),
+    ]);
+  }
+  return toCsv(rows);
+}
+
+export const CATEGORY_COLUMNS = ["Category", "Direction", "Total"] as const;
+
+/**
+ * Category totals as CSV, in the order the engine returns them (largest first).
+ *
+ * Direction is spelled out rather than carried by a sign, matching how the app
+ * treats an amount: the sign belongs to the direction the user chose.
+ */
+export function categoryTotalsToCsv(
+  totals: readonly CategoryTotal[],
+  currency: Currency,
+  locale?: string,
+): string {
+  const rows: string[][] = [CATEGORY_COLUMNS.slice()];
+  for (const total of totals) {
+    rows.push([
+      total.category,
+      total.direction === "INFLOW" ? "Inflow" : "Outflow",
+      formatCents(total.totalCents, currency, { locale }),
     ]);
   }
   return toCsv(rows);

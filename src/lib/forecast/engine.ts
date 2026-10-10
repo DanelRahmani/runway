@@ -242,12 +242,6 @@ export function runProjection(forecast: Forecast, options: RunProjectionOptions 
   };
 }
 
-/** Closing balance on a specific date, or `null` when the date is outside the projection. */
-export function balanceOn(projection: Projection, date: IsoDate): number | null {
-  const day = projection.days.find((candidate) => candidate.date === date);
-  return day === undefined ? null : day.closingCents;
-}
-
 /**
  * Total movement per category across the **whole horizon**, largest first.
  *

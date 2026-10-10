@@ -2,6 +2,7 @@ import { PiggyBankIcon, TargetIcon } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 
 import { DonutChart } from "@/components/charts/DonutChart";
+import { GoalProgressChart } from "@/components/charts/GoalProgressChart";
 import { StackedCompositionChart } from "@/components/charts/StackedCompositionChart";
 import { AccountsPanel } from "@/components/forecast/AccountsPanel";
 import { AnimatedMoney } from "@/components/forecast/AnimatedMoney";
@@ -13,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { formatIsoDate } from "@/lib/dates";
 import { accountProjection } from "@/lib/forecast/accounts";
-import { compositionSeries, goalProgress, savingsSummary } from "@/lib/forecast/savings";
+import { compositionSeries, goalProgress, keptCurve, savingsSummary } from "@/lib/forecast/savings";
 import { formatCents } from "@/lib/money";
 import { cn, formatPercent } from "@/lib/utils";
 import type {
@@ -243,6 +244,12 @@ function GoalCard({
     [projection, goal],
   );
 
+  // The same accumulation for the chart below; empty until a goal exists.
+  const kept = useMemo(
+    () => (goal === undefined ? [] : keptCurve(projection)),
+    [projection, goal],
+  );
+
   const save = (): void => {
     onGoalChange({ label: label.trim(), targetCents, targetDate });
     setEditing(false);
@@ -338,6 +345,12 @@ function GoalCard({
                 />
               </div>
             </div>
+
+            <GoalProgressChart
+              points={kept}
+              targetCents={progress.targetCents}
+              currency={currency}
+            />
 
             <p
               className={cn(

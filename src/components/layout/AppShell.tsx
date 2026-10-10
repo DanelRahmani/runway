@@ -1,5 +1,6 @@
-import { AlertTriangleIcon, ArrowUpRightIcon, GlobeIcon, InfoIcon } from "lucide-react";
+import { AlertTriangleIcon, ArrowUpRightIcon, DatabaseIcon, GlobeIcon, InfoIcon, LayoutListIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { NavLink } from "react-router-dom";
 
 import { Disclaimer } from "@/components/layout/Disclaimer";
 import { ThemeSwitcher } from "@/components/layout/ThemeSwitcher";
@@ -16,11 +17,24 @@ interface AppShellProps {
   wide?: boolean;
 }
 
+/**
+ * The two places a page can be reached from anywhere.
+ *
+ * Deliberately only two: a forecast is opened from the list, so listing the
+ * routes a user cannot yet see would be noise. Data gets a link because it is the
+ * one page with no other way in — it is where a backup is taken, and a backup is
+ * what saves the data when the browser is cleared.
+ */
+const NAV_LINKS: ReadonlyArray<{ to: string; label: string; icon: ReactNode; end: boolean }> = [
+  { to: "/", label: "Forecasts", icon: <LayoutListIcon className="size-3.5" />, end: true },
+  { to: "/data", label: "Data", icon: <DatabaseIcon className="size-3.5" />, end: false },
+];
+
 export function AppShell({ children, actions, wide = false }: AppShellProps) {
   const { status } = useForecasts();
 
   return (
-    <div className="bg-background flex min-h-dvh flex-col">
+    <div className="bg-background flex min-h-dvh flex-col print:hidden">
       <a
         href="#main"
         className="bg-background focus:ring-ring sr-only rounded-md px-3 py-2 text-sm font-medium focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:ring-2"
@@ -40,6 +54,26 @@ export function AppShell({ children, actions, wide = false }: AppShellProps) {
             {/* The wordmark carries the accent thread, like the name on a label. */}
             <span className="font-display text-accent-text text-lg tracking-tight">Runway</span>
           </a>
+          <nav aria-label="Main" className="flex items-center gap-0.5">
+            {NAV_LINKS.map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                end={link.end}
+                className={({ isActive }) =>
+                  cn(
+                    "focus-visible:ring-ring inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none",
+                    isActive
+                      ? "bg-secondary text-foreground"
+                      : "text-muted-foreground hover:text-foreground",
+                  )
+                }
+              >
+                {link.icon}
+                <span className="hidden sm:inline">{link.label}</span>
+              </NavLink>
+            ))}
+          </nav>
           <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
             {actions}
             <ThemeSwitcher />

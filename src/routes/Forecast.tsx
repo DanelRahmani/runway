@@ -4,6 +4,7 @@ import {
   CopyIcon,
   GitCompareArrowsIcon,
   Loader2Icon,
+  PrinterIcon,
   SearchXIcon,
   Trash2Icon,
   TriangleAlertIcon,
@@ -25,6 +26,8 @@ import { RecurringTab } from "@/components/forecast/RecurringTab";
 import { SaveIndicator } from "@/components/forecast/SaveIndicator";
 import { SavingsTab } from "@/components/forecast/SavingsTab";
 import { ScenariosTab } from "@/components/forecast/ScenariosTab";
+import { WhatIfTab } from "@/components/forecast/WhatIfTab";
+import { PrintSummary } from "@/components/report/PrintSummary";
 import { Alert, AlertDescription, AlertIcon, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,6 +45,7 @@ const TABS = [
   "one-off",
   "invoices",
   "scenarios",
+  "whatif",
   "assumptions",
   "data",
 ] as const;
@@ -54,6 +58,7 @@ const TAB_LABELS: Record<TabValue, string> = {
   "one-off": "One-off",
   invoices: "Invoices",
   scenarios: "Scenarios",
+  whatif: "What if",
   assumptions: "Assumptions",
   data: "Data",
 };
@@ -61,10 +66,13 @@ const TAB_LABELS: Record<TabValue, string> = {
 /**
  * Tabs that make no sense on a household forecast.
  *
- * A household raises no invoices — the engine already generates none for it —
- * and a scenario is only meaningful against a business plan.
+ * A household raises no invoices — the engine already generates none for it — so
+ * the invoices tab is the only one withheld. Scenarios used to be withheld too,
+ * on the reasoning that a scenario is a business tool. That was wrong: "what if
+ * the rent goes up" is a household question. The presets are filtered by kind
+ * instead, so a household is never offered an invoice-driven one.
  */
-const PERSONAL_HIDDEN_TABS: ReadonlySet<TabValue> = new Set<TabValue>(["invoices", "scenarios"]);
+const PERSONAL_HIDDEN_TABS: ReadonlySet<TabValue> = new Set<TabValue>(["invoices"]);
 
 export function ForecastPage() {
   const { id } = useParams<{ id: string }>();
@@ -158,12 +166,23 @@ export function ForecastPage() {
     <AppShell
       wide
       actions={
-        <Button variant="ghost" size="sm" asChild>
-          <Link to="/">
-            <ArrowLeftIcon />
-            <span className="hidden sm:inline">All forecasts</span>
-          </Link>
-        </Button>
+        <>
+          {/*
+           * Prints the one-pager in `PrintSummary`, which portals itself outside
+           * this shell — the shell is `print:hidden`, so anything inside it would
+           * be hidden with it.
+           */}
+          <Button variant="ghost" size="sm" onClick={() => window.print()}>
+            <PrinterIcon />
+            <span className="hidden sm:inline">Print</span>
+          </Button>
+          <Button variant="ghost" size="sm" asChild>
+            <Link to="/">
+              <ArrowLeftIcon />
+              <span className="hidden sm:inline">All forecasts</span>
+            </Link>
+          </Button>
+        </>
       }
     >
       <header className="flex flex-col gap-3">
@@ -337,6 +356,12 @@ export function ForecastPage() {
           </ErrorBoundary>
         </TabsContent>
 
+        <TabsContent value="whatif">
+          <ErrorBoundary label="the what-if table">
+            <WhatIfTab forecast={forecast} />
+          </ErrorBoundary>
+        </TabsContent>
+
         <TabsContent value="assumptions">
           <ErrorBoundary label="assumptions">
             <AssumptionsTab forecast={forecast} update={update} />
@@ -362,6 +387,8 @@ export function ForecastPage() {
           });
         }}
       />
+
+      <PrintSummary forecast={forecast} projection={projection} />
     </AppShell>
   );
 }

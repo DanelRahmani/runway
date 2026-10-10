@@ -64,14 +64,6 @@ export function sumCents(...values: readonly number[]): number {
   return total;
 }
 
-export function addCents(a: number, b: number): number {
-  return assertIntegerCents(a) + assertIntegerCents(b);
-}
-
-export function subtractCents(a: number, b: number): number {
-  return assertIntegerCents(a) - assertIntegerCents(b);
-}
-
 /**
  * Which character is the decimal point, and which groups thousands, in a locale.
  *

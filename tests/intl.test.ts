@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { describeDays } from "@/lib/dates";
 import { dateFormat, numberFormat } from "@/lib/intl";
 import { formatCents } from "@/lib/money";
 
@@ -35,5 +36,20 @@ describe("formatter cache", () => {
     expect(formatCents(150_000, "EUR", { locale: "de-DE" })).toContain("1.500,00");
     expect(formatCents(150_000, "EUR", { locale: "en-GB" })).toBe("€1,500.00");
     expect(formatCents(150_000, "JPY", { locale: "en-US" })).toBe("¥1,500");
+  });
+});
+
+describe("day counts in words", () => {
+  it("reads naturally at the singular", () => {
+    expect(describeDays(1)).toBe("1 day");
+    expect(describeDays(0)).toBe("0 days");
+  });
+
+  it("keeps the exact count and only approximates once months are worth naming", () => {
+    expect(describeDays(45)).toBe("45 days");
+
+    const long = describeDays(117);
+    expect(long).toContain("117 days");
+    expect(long).toContain("months");
   });
 });

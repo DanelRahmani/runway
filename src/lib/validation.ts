@@ -5,7 +5,6 @@ import { MINOR_UNITS_PER_MAJOR } from "@/lib/money";
 import {
   CURRENCIES,
   type Forecast,
-  type Horizon,
   type Invoice,
   type OneOffItem,
   type RecurringItem,
@@ -197,8 +196,6 @@ export type BackupFile = z.infer<typeof backupFileSchema>;
 
 /* ------------------------------------------------------------------ helpers */
 
-export const DEFAULT_HORIZON: Horizon = "THIRTEEN_WEEKS";
-
 export interface FieldErrors {
   [path: string]: string;
 }
@@ -211,11 +208,6 @@ export function toFieldErrors(error: z.ZodError): FieldErrors {
     if (errors[path] === undefined) errors[path] = issue.message;
   }
   return errors;
-}
-
-/** First message only — for a compact summary banner. */
-export function firstErrorMessage(error: z.ZodError): string {
-  return error.issues[0]?.message ?? "Something in this forecast is not valid.";
 }
 
 export function validateForecast(value: unknown):

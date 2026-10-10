@@ -33,6 +33,7 @@ import {
   type SortChoice,
 } from "@/lib/itemSort";
 import { formatCents } from "@/lib/money";
+import { householdRecurringItems } from "@/lib/sample";
 import { showUndoToast } from "@/lib/toast";
 import { createId } from "@/lib/utils";
 import type { Currency, Forecast, ItemImpact, Projection, RecurringItem } from "@/types/forecast";
@@ -217,6 +218,31 @@ export function RecurringTab({ forecast, projection, update }: RecurringTabProps
     });
   };
 
+  /**
+   * The usual household month, added in one pass.
+   *
+   * Every amount is a placeholder — the point is to remove the typing, not to be
+   * right. The list is the personal starter's own, so the two can never disagree,
+   * and the undo takes the whole batch back out rather than just dismissing a toast.
+   */
+  const addHouseholdTemplate = (): void => {
+    const items = householdRecurringItems(forecast.startDate);
+
+    update((current) => ({
+      ...current,
+      recurringItems: [...current.recurringItems, ...items],
+    }));
+
+    showUndoToast(`${items.length} household items added with placeholder amounts.`, () => {
+      update((current) => ({
+        ...current,
+        recurringItems: current.recurringItems.filter(
+          (item) => !items.some((added) => added.id === item.id),
+        ),
+      }));
+    });
+  };
+
   const incomeTotal = forecast.recurringItems
     .filter((item) => item.isActive && item.direction === "INFLOW")
     .reduce((total, item) => total + item.amountCents, 0);
@@ -235,7 +261,14 @@ export function RecurringTab({ forecast, projection, update }: RecurringTabProps
 
       <CardContent className="flex flex-col gap-4">
         {forecast.recurringItems.length === 0 ? (
-          <EmptyRecurring onAdd={() => setEditing({ item: null })} />
+          <EmptyRecurring
+            onAdd={() => setEditing({ item: null })}
+            // Only a household gets the household list; a business's running
+            // costs have the business starter and no equivalent template.
+            onUseTemplate={
+              forecast.forecastKind === "PERSONAL" ? addHouseholdTemplate : undefined
+            }
+          />
         ) : (
           <>
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -480,7 +513,13 @@ function summary(count: number, income: number, expense: number, currency: Curre
   return `${count} item${count === 1 ? "" : "s"} · ${formatCents(income, currency)} in, ${formatCents(expense, currency)} out per cycle`;
 }
 
-function EmptyRecurring({ onAdd }: { onAdd: () => void }) {
+function EmptyRecurring({
+  onAdd,
+  onUseTemplate,
+}: {
+  onAdd: () => void;
+  onUseTemplate?: () => void;
+}) {
   return (
     <div className="flex flex-col items-start gap-3 rounded-lg border border-dashed p-5">
       <div className="flex flex-col gap-1">
@@ -489,10 +528,17 @@ function EmptyRecurring({ onAdd }: { onAdd: () => void }) {
           Rent, subscriptions, a retainer, a tax provision — anything that repeats goes here.
         </p>
       </div>
-      <Button size="sm" variant="outline" onClick={onAdd}>
-        <PlusIcon />
-        Add your first item
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" variant="outline" onClick={onAdd}>
+          <PlusIcon />
+          Add your first item
+        </Button>
+        {onUseTemplate !== undefined ? (
+          <Button size="sm" variant="ghost" onClick={onUseTemplate}>
+            Add the usual household items
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 }

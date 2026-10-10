@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatIsoDate } from "@/lib/dates";
-import { describeScenarioImpact, SCENARIO_PRESETS } from "@/lib/forecast/scenarios";
+import { describeScenarioImpact, scenarioPresets, type ScenarioPreset } from "@/lib/forecast/scenarios";
 import { formatCents } from "@/lib/money";
 import {
   createScenario,
@@ -34,7 +34,7 @@ export function ScenariosTab({ forecast, scenarios }: ScenariosTabProps) {
   // that, so this panel stays a single at-a-glance check.
   const featured = scenarios[0];
 
-  const applyPreset = async (preset: (typeof SCENARIO_PRESETS)[number]): Promise<void> => {
+  const applyPreset = async (preset: ScenarioPreset): Promise<void> => {
     const variant = preset.apply(forecast);
     if (variant === null) return;
 
@@ -69,7 +69,7 @@ export function ScenariosTab({ forecast, scenarios }: ScenariosTabProps) {
         <CardContent className="flex flex-col gap-3">
           <p className="text-muted-foreground text-xs font-medium">Start from a common question</p>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {SCENARIO_PRESETS.map((preset) => {
+            {scenarioPresets(forecast.forecastKind).map((preset) => {
               const applicable = preset.apply(forecast) !== null;
               return (
                 <button
@@ -96,7 +96,8 @@ export function ScenariosTab({ forecast, scenarios }: ScenariosTabProps) {
             })}
           </div>
           <p className="text-muted-foreground text-xs">
-            Pre-set amounts are in euros. Adjust them on the scenario once it is created.
+            Amounts in these questions are indicative placeholders in this forecast's own
+            currency — adjust them on the scenario once it is created.
           </p>
         </CardContent>
       </Card>

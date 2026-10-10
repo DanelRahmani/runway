@@ -1,8 +1,8 @@
-import { downloadFile, periodsToCsv } from "@/lib/csv";
+import { categoryTotalsToCsv, downloadFile, periodsToCsv } from "@/lib/csv";
 import { todayIso } from "@/lib/dates";
 import { createId, slugify } from "@/lib/utils";
 import { BACKUP_SCHEMA_VERSION, backupFileSchema, type BackupFile } from "@/lib/validation";
-import type { Forecast, Granularity, ProjectionPeriod } from "@/types/forecast";
+import type { CategoryTotal, Forecast, Granularity, ProjectionPeriod } from "@/types/forecast";
 
 /**
  * JSON backup and restore.
@@ -60,6 +60,23 @@ export function exportProjectionToCsv(
   locale?: string,
 ): void {
   downloadFile(csvFilename(name, granularity), "text/csv", periodsToCsv(periods, currency, locale));
+}
+
+export function categoryCsvFilename(name: string, date = todayIso()): string {
+  return `runway-${slugify(name)}-categories-${date}.csv`;
+}
+
+export function exportCategoryTotalsToCsv(
+  name: string,
+  currency: Forecast["currency"],
+  totals: readonly CategoryTotal[],
+  locale?: string,
+): void {
+  downloadFile(
+    categoryCsvFilename(name),
+    "text/csv",
+    categoryTotalsToCsv(totals, currency, locale),
+  );
 }
 
 /* ------------------------------------------------------------------- import */
