@@ -449,7 +449,10 @@ function goalVerdict(progress: ReturnType<typeof goalProgress>, currency: Curren
   const short = formatCents(progress.shortfallCents, currency);
 
   if (progress.inconclusive) {
-    return `The target date is beyond this horizon, so this forecast cannot say whether you will get there. You are ${short} short by the end of the projection.`;
+    // Deliberately not "cannot say" any more: the calculator below answers exactly
+    // this question. What this projection cannot do is judge the plan as it stands,
+    // because it stops before the target date.
+    return `The target date sits past the end of this horizon, so the projection cannot judge the plan against it. You are ${short} short by the last projected day — the calculator below works out what it would take.`;
   }
 
   return `Not on track — ${short} short by ${formatIsoDate(progress.goal.targetDate)}. Lower the target, push the date, or set more aside.`;
