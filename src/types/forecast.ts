@@ -154,6 +154,17 @@ export interface ForecastGoal {
   targetDate: IsoDate;
 }
 
+/**
+ * A closing balance the household actually saw on a date.
+ *
+ * One observation, not a ledger: Runway compares it with what the plan predicted
+ * and stops there. It is not an import and not a reconciliation.
+ */
+export interface ForecastActual {
+  date: IsoDate;
+  closingBalanceCents: number;
+}
+
 export interface Forecast {
   id: string;
   name: string;
@@ -192,6 +203,11 @@ export interface Forecast {
    * engine leaves the amount alone entirely when a month sits at 100.
    */
   seasonalCostPercent?: number[];
+  /**
+   * Real balances, so the plan can be measured against something. Absent means the
+   * forecast has never been checked, which is how every forecast starts.
+   */
+  actuals?: ForecastActual[];
   recurringItems: RecurringItem[];
   oneOffItems: OneOffItem[];
   invoices: Invoice[];

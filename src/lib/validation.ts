@@ -157,6 +157,12 @@ export const forecastGoalSchema = z.object({
 /** Months in a calendar year. Shared so the engine, the form and the schema agree. */
 export const MONTHS_PER_YEAR = 12;
 
+export const forecastActualSchema = z.object({
+  date: isoDateSchema,
+  // Any sign: a real balance can be overdrawn, unlike an item amount.
+  closingBalanceCents: amountCentsSchema,
+});
+
 /**
  * Twelve integer percentages, January first, where `100` is a normal month.
  *
@@ -196,6 +202,9 @@ export const forecastSchema = z.object({
   // projects exactly as it did.
   weekendShifting: z.boolean().optional(),
   seasonalCostPercent: seasonalCostPercentSchema.optional(),
+  // Optional as well, and capped: this is a spot check of a handful of dates, not
+  // an import of every transaction.
+  actuals: z.array(forecastActualSchema).max(400, "Too many recorded balances").optional(),
   recurringItems: z.array(recurringItemSchema).max(200, "Too many recurring items"),
   oneOffItems: z.array(oneOffItemSchema).max(400, "Too many one-off items"),
   invoices: z.array(invoiceSchema).max(200, "Too many invoices"),

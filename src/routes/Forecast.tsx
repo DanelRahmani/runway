@@ -329,7 +329,7 @@ export function ForecastPage() {
 
         <TabsContent value="overview">
           <ErrorBoundary label="the projection">
-            <OverviewTab forecast={forecast} projection={projection} />
+            <OverviewTab forecast={forecast} projection={projection} update={update} />
           </ErrorBoundary>
         </TabsContent>
 

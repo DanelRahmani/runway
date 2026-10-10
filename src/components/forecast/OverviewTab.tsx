@@ -1,4 +1,4 @@
-import { DownloadIcon } from "lucide-react";
+import { DownloadIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useState, useMemo } from "react";
 
 import { CategoryBreakdown } from "@/components/charts/CategoryBreakdown";
@@ -7,8 +7,11 @@ import { CashCalendar } from "@/components/forecast/CashCalendar";
 import { DonutChart } from "@/components/charts/DonutChart";
 import { heatLevel } from "@/components/charts/chart-utils";
 import { GranularityToggle } from "@/components/forecast/GranularityToggle";
+import { Field } from "@/components/forms/Field";
+import { MoneyInput } from "@/components/forms/MoneyInput";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -19,10 +22,11 @@ import {
   TableWrapper,
 } from "@/components/ui/table";
 import { aggregate, isPartialPeriod, periodDayCount } from "@/lib/forecast/aggregate";
+import { compareActuals } from "@/lib/forecast/actuals";
 import { categoryTotals } from "@/lib/forecast/engine";
 import { insights, type Insight } from "@/lib/forecast/insights";
 import { sumCategoryTotals } from "@/lib/categories";
-import { formatIsoDate, formatIsoDateRange } from "@/lib/dates";
+import { formatIsoDate, formatIsoDateRange, compareIsoDate, todayIso } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
 import { exportProjectionToCsv } from "@/lib/storage/backup";
 import { cn } from "@/lib/utils";
@@ -31,9 +35,10 @@ import type { Forecast, Granularity, Projection, ProjectionPeriod } from "@/type
 interface OverviewTabProps {
   forecast: Forecast;
   projection: Projection;
+  update: (updater: (current: Forecast) => Forecast) => void;
 }
 
-export function OverviewTab({ forecast, projection }: OverviewTabProps) {
+export function OverviewTab({ forecast, projection, update }: OverviewTabProps) {
   const [granularity, setGranularity] = useState<Granularity>("weekly");
 
   const periods = aggregate(projection.days, granularity);
@@ -118,7 +123,8 @@ export function OverviewTab({ forecast, projection }: OverviewTabProps) {
         </Card>
       </div>
 
-      <InsightsCard forecast={forecast} projection={projection} />
+      <ActualsCard forecast={forecast} projection={projection} update={update} />
+      <InsightsCard forecast={forecast} projection={projection} update={update} />
       <NetByMonth projection={projection} currency={forecast.currency} />
     </div>
   );
@@ -206,6 +212,137 @@ const TONE_CLASSES: Record<Insight["tone"], string> = {
   negative: "bg-negative",
   neutral: "bg-muted-foreground",
 };
+
+/**
+ * Plan versus reality.
+ *
+ * The one card that can make the rest of the page wrong. A recorded balance is one
+ * observation, not a reconciliation: it is compared with what the plan predicted
+ * for that same day and nothing else happens to it.
+ */
+function ActualsCard({ forecast, projection, update }: OverviewTabProps) {
+  const currency = forecast.currency;
+  const comparison = useMemo(() => compareActuals(forecast, projection), [forecast, projection]);
+  const [date, setDate] = useState(() => todayIso());
+  const [amountCents, setAmountCents] = useState(0);
+
+  const record = (): void => {
+    if (date === "") return;
+
+    update((current) => {
+      // One balance per day: recording the same date again replaces it rather than
+      // stacking two versions of the same morning.
+      const others = (current.actuals ?? []).filter((row) => row.date !== date);
+      return {
+        ...current,
+        actuals: [...others, { date, closingBalanceCents: amountCents }].sort((a, b) =>
+          compareIsoDate(a.date, b.date),
+        ),
+      };
+    });
+  };
+
+  const forget = (target: string): void => {
+    update((current) => ({
+      ...current,
+      actuals: (current.actuals ?? []).filter((row) => row.date !== target),
+    }));
+  };
+
+  const latest = comparison.latestVarianceCents;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Plan vs reality</CardTitle>
+        <CardDescription>
+          {comparison.rows.length === 0
+            ? "Record what your balance actually was, and Runway will show how far the plan has drifted from it."
+            : latest === null
+              ? "None of the recorded dates fall inside this horizon, so there is nothing to compare them with."
+              : latest === 0
+                ? "Your newest balance landed exactly where the plan said it would."
+                : `Your newest balance came in ${formatCents(Math.abs(latest), currency)} ${
+                    latest > 0 ? "above" : "below"
+                  } the plan.`}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <Field label="On" htmlFor="actual-date">
+            <Input
+              id="actual-date"
+              type="date"
+              value={date}
+              onChange={(event) => setDate(event.target.value)}
+            />
+          </Field>
+          <Field label="Closing balance" htmlFor="actual-amount">
+            <MoneyInput
+              valueCents={amountCents}
+              onValueChange={setAmountCents}
+              currency={currency}
+            />
+          </Field>
+          <Button size="sm" onClick={record} disabled={date === ""}>
+            <PlusIcon />
+            Record
+          </Button>
+        </div>
+
+        {comparison.rows.length > 0 ? (
+          <TableWrapper>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead className="text-right">Planned</TableHead>
+                  <TableHead className="text-right">Actual</TableHead>
+                  <TableHead className="text-right">Difference</TableHead>
+                  <TableHead />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {comparison.rows.map((row) => (
+                  <TableRow key={row.date}>
+                    <TableCell>{formatIsoDate(row.date)}</TableCell>
+                    <TableCell className="tnum text-right">
+                      {row.plannedCents === null ? "—" : formatCents(row.plannedCents, currency)}
+                    </TableCell>
+                    <TableCell className="tnum text-right">
+                      {formatCents(row.actualCents, currency)}
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        "tnum text-right",
+                        row.varianceCents !== null &&
+                          (row.varianceCents < 0 ? "text-negative" : "text-positive"),
+                      )}
+                    >
+                      {row.varianceCents === null
+                        ? "Outside the horizon"
+                        : formatCents(row.varianceCents, currency, { signed: true })}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Remove the balance recorded for ${formatIsoDate(row.date)}`}
+                        onClick={() => forget(row.date)}
+                      >
+                        <Trash2Icon />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableWrapper>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
 
 /** Plain sentences about the projection, so read off it rather than generated. */
 function InsightsCard({ forecast, projection }: OverviewTabProps) {
