@@ -6,7 +6,9 @@ import {
   breakdownSeries,
   growthRows,
   SPENDING_ACCOUNT_ID,
+  spendableRunway,
 } from "@/lib/forecast/accounts";
+import { compareIsoDate } from "@/lib/dates";
 import { runProjection } from "@/lib/forecast/engine";
 import type { Account, Forecast, IsoDate, OneOffItem, RecurringItem } from "@/types/forecast";
 
@@ -320,5 +322,60 @@ describe("contributions and growth breakdown", () => {
     // The broker has no rate and no payments, so isolating it is a flat nothing.
     expect(alone?.contributionsCents).toBe(0);
     expect(alone?.growthCents).toBe(0);
+  });
+});
+
+/*
+ * The spending account is where the ledger lands, but a household with two current
+ * accounts can spend from both. The dashboard's cash-out date counts the spending
+ * account alone, so on such a forecast it fires while there is still money to move
+ * across — the pessimistic answer, and the one the README lists as a limitation.
+ */
+describe("cash-out across spendable accounts", () => {
+  it("reproduces the dashboard figures when nothing else is spendable", () => {
+    const forecast = makeForecast({ recurringItems: [recurring(40_000, "Housing")] });
+    const projection = runProjection(forecast);
+    const runway = spendableRunway(forecast, accountProjection(forecast, projection));
+
+    // The property that makes this a view rather than a change: one spendable
+    // account has to give back exactly what the app already led with.
+    expect(runway.accountCount).toBe(1);
+    expect(runway.cashOutDate).toBe(projection.summary.cashOutDate);
+    expect(runway.minimumCents).toBe(projection.summary.minimumBalanceCents);
+  });
+
+  it("counts a second cash account as spendable and a savings pot as not", () => {
+    const accounts: Account[] = [
+      { id: "current", name: "Second current", kind: "CASH", startingBalanceCents: 200_000 },
+      { id: "savings", name: "Savings", kind: "SAVINGS", startingBalanceCents: 500_000 },
+    ];
+    const forecast = makeForecast({ accounts, recurringItems: [recurring(40_000, "Housing")] });
+    const runway = spendableRunway(
+      forecast,
+      accountProjection(forecast, runProjection(forecast)),
+    );
+
+    // Savings is money you hold, not money you can spend without moving it, so it
+    // stays out of this count — the same split the panel's own totals make.
+    expect(runway.accountCount).toBe(2);
+  });
+
+  it("pushes the cash-out date later when a transfer funds a second cash account", () => {
+    const diverted = makeForecast({
+      startingBalanceCents: 100_000,
+      recurringItems: [recurring(40_000, "Housing")],
+      // Two-sided: it leaves the spending account and arrives in the pot.
+      oneOffItems: [oneOff(80_000, "Savings", "2026-01-05", "current")],
+      accounts: [{ id: "current", name: "Second current", kind: "CASH", startingBalanceCents: 0 }],
+    });
+    const projection = runProjection(diverted);
+    const runway = spendableRunway(diverted, accountProjection(diverted, projection));
+
+    expect(projection.summary.cashOutDate).not.toBeNull();
+    expect(runway.cashOutDate).not.toBeNull();
+    expect(
+      compareIsoDate(runway.cashOutDate ?? "", projection.summary.cashOutDate ?? ""),
+    ).toBe(1);
+    expect(runway.minimumCents).toBeGreaterThan(projection.summary.minimumBalanceCents);
   });
 });

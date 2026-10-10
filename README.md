@@ -71,6 +71,9 @@ the curve, because that is what actually happens to your cash.
   legend carries every figure, so colour is never the only signal.
 - **Stacked composition chart** — the same three parts kept apart by week or month. A donut folds
   every period into one shape, so a tax quarter and a quiet month look identical once summed.
+- **Month by month** — a calendar showing one month at a time, so "is the money in before the rent
+  goes out" can be read off a grid instead of inferred from a weekly column. Only days inside the
+  horizon appear; a month the forecast starts part-way through is drawn from that day on.
 
 ### Editing in bulk
 Every item table has a checkbox column. Tick rows and a bar appears that applies one category to the
@@ -134,20 +137,38 @@ and then staying there for the rest of the year.
 
 ### Scenarios
 Duplicate a forecast as a scenario, change one assumption, and compare the two on one chart with a
-Base | Scenario | Difference table. Four preset questions are built in:
+Base | Scenario | Difference table. Six preset questions are built in, filtered to the kind of
+forecast you are looking at — a household is never asked about a late-paying client:
 
-- Largest client pays 30 days late
-- Lose a monthly client
-- Hire someone for 1,500 per month
+- Largest client pays 30 days late *(business)*
+- Lose a monthly client *(business)*
+- Hire someone for 1,500 per month *(business)*
 - Buy a 2,000 laptop next month
+- Biggest monthly cost rises 5%
+- Everything costs 10% more
 
-The two that name an amount state it in the forecast's own currency.
+Presets that name an amount state it in the forecast's own currency.
+
+### Asking what if
+The **What if** tab answers the question one projection cannot: what happens if running costs come
+in higher. Each row adds one more monthly outflow — 5% of your average monthly outflow at a time, up
+to 30% — and re-runs the whole projection, so the ending balance and the cash-out date are computed
+exactly as they are everywhere else.
+
+It is deliberately **not** an inflation model. The increase is flat, lands on outflows only, and
+never compounds, so the same amount is added in the final month as the first. The base is your
+average monthly outflow *taken from the projection*, so a weekly cost counts the four or five times
+it actually lands rather than being read as one payment a month.
 
 ### Your data
 - Everything is stored locally in **IndexedDB**
 - Export one forecast or all of them as JSON
 - Import JSON via file picker or drag-and-drop, with a preview and a **merge** or **replace** mode
-- Export the projection as CSV at daily, weekly or monthly granularity
+- Export the projection as CSV at daily, weekly or monthly granularity, and the category totals at
+  the size of the horizon
+- **Print a one-page summary** — the headline figures, the goal and a month-by-month table, laid out
+  for paper. It goes through the browser's own print dialog, so save-as-PDF costs nothing and no
+  server is involved.
 - Clear all local data, behind a confirmation
 
 ---
@@ -477,8 +498,9 @@ comparison meaningful.
 - **No live exchange rates.** Nothing is converted; a scenario preset names its amount in the
   forecast's own currency.
 - **Real terms only.** There is no inflation modelling.
-- **One spending account.** Account balances are modelled, but only one account is spendable, so a
-  second current account cannot yet be marked as money you can actually spend from.
+- **One spendable account is the headline.** Any number of cash accounts count towards the spendable
+  total, and the Savings tab reports the cash-out date across all of them together. The dashboard's
+  cash-out date and the balance chart still follow the spending account alone.
 - **Growth is a smooth average.** Rates compound monthly at a flat rate. A real sequence has bad
   years, and a bad early year hurts more than the average implies — the UI says so wherever growth
   is shown.
@@ -493,7 +515,9 @@ comparison meaningful.
   a lightweight overlay, so each one costs a row.
 - **Forecasts are recalculated on the client.** Fine up to a few hundred items; a very large forecast
   would be worth memoising further.
-- **No PDF report.** CSV and JSON only.
+- **Print, not a PDF generator.** The one-page summary goes through the browser's print dialog, so
+  the output is whatever that browser produces. There is no bundled PDF library and no server-side
+  render.
 - **Yen is stored at two decimal places** like the other currencies so the arithmetic stays uniform;
   it is displayed with none, matching how yen is actually used.
 
@@ -501,19 +525,17 @@ comparison meaningful.
 
 ## Suggested next features
 
-1. **Sensitivity table** — ending balance and cash-out date across a range of one assumption (for
-   example payment delay from 0 to 90 days).
-2. **Invoice ageing view** — outstanding receivables bucketed by how overdue they are.
-3. **Recurring item templates** — a library of common freelancer costs.
-4. **Multiple spending accounts** — mark several accounts as spendable and measure the cash-out date
-   across all of them.
-5. **Offline install as a PWA** — a service worker so the app opens with no connection, which the
+1. **Invoice ageing view** — outstanding receivables bucketed by how overdue they are.
+2. **Business item templates** — the household list ships, telling a new household which costs to
+   expect; a freelancer's running costs have no equivalent.
+3. **Offline install as a PWA** — a service worker so the app opens with no connection, which the
    copy currently promises but the code does not yet deliver.
-6. **Multi-currency forecasts** with explicit rates.
-6. **PDF summary** for sharing a forecast with an accountant.
-7. **Optional end-to-end encryption plus a sync backend**, for people who want their data on more
+4. **Multi-currency forecasts** with explicit rates.
+5. **Compounding inflation** — the What if tab holds the increase flat and applies it to outflows
+   alone. A rate that compounds year on year does not exist yet.
+6. **Optional end-to-end encryption plus a sync backend**, for people who want their data on more
    than one device.
-8. **Baseline comparison** — import last month's actuals and compare them against the projection.
+7. **Baseline comparison** — import last month's actuals and compare them against the projection.
 
 ---
 

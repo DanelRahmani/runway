@@ -8,7 +8,8 @@ import { MoneyInput } from "@/components/forms/MoneyInput";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { accountKindLabel, SPENDING_ACCOUNT_ID, type AccountProjection } from "@/lib/forecast/accounts";
+import { formatIsoDate } from "@/lib/dates";
+import { accountKindLabel, SPENDING_ACCOUNT_ID, spendableRunway, type AccountProjection } from "@/lib/forecast/accounts";
 import { formatCents } from "@/lib/money";
 import { cn, createId } from "@/lib/utils";
 import type { Account, AccountKind, Currency, Forecast } from "@/types/forecast";
@@ -58,6 +59,8 @@ export function AccountsPanel({
   );
   // Stable reference, so the chart's own memos are not defeated every render.
   const potAccounts = useMemo(() => pots.map((entry) => entry.account), [pots]);
+
+  const runway = useMemo(() => spendableRunway(forecast, balances), [forecast, balances]);
 
   const parsedRate = Number(ratePercent.replace(",", "."));
   const rateValid = Number.isFinite(parsedRate) && parsedRate >= -20 && parsedRate <= 20;
@@ -138,6 +141,18 @@ export function AccountsPanel({
             <AnimatedMoney cents={balances.totalClosingCents} currency={currency} />
           </Figure>
         </dl>
+
+        {/*
+         * Only worth saying when there is more than one spendable account. With
+         * one, this is the dashboard's own cash-out date said twice.
+         */}
+        {runway.accountCount > 1 ? (
+          <p className="text-muted-foreground text-xs leading-relaxed">
+            {runway.cashOutDate === null
+              ? `Counting all ${runway.accountCount} spendable accounts together, the balance never closes below zero in this horizon.`
+              : `Counting all ${runway.accountCount} spendable accounts together, cash lasts until ${formatIsoDate(runway.cashOutDate)} — later than the spending account alone, because money you can reach is not money you have spent.`}
+          </p>
+        ) : null}
 
         <ul className="flex flex-col gap-2">
           <li>

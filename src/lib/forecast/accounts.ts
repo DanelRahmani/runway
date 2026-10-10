@@ -264,6 +264,58 @@ export function accountProjection(forecast: Forecast, projection: Projection): A
   };
 }
 
+export interface SpendableRunway {
+  /** Combined closing balance of every spendable account, day by day. */
+  series: Array<{ date: IsoDate; cents: number }>;
+  /** How many accounts are spendable. The spending account always is. */
+  accountCount: number;
+  minimumCents: number;
+  minimumDate: IsoDate;
+  /** First day the combined balance closes below zero, or `null`. */
+  cashOutDate: IsoDate | null;
+}
+
+/**
+ * The cash-out story across every spendable account, not just the spending one.
+ *
+ * The spending account is where the ledger lands, but it is not all the money the
+ * user can actually use. A transfer into a second cash account lowers the spending
+ * balance without lowering what they hold — so on a household with two current
+ * accounts the dashboard's cash-out date is the pessimistic answer: it fires while
+ * there is still money to reach.
+ *
+ * Derived from the per-day series `accountProjection` already builds, so this is a
+ * view rather than a second engine. With one spendable account it reproduces the
+ * dashboard figures exactly, which is what `tests/accounts.test.ts` pins.
+ */
+export function spendableRunway(
+  forecast: Forecast,
+  balances: AccountProjection,
+): SpendableRunway {
+  const spendable = balances.accounts.filter((summary) => summary.account.kind === "CASH");
+
+  // Mirrors `summarise`: the running minimum starts at the opening balance rather
+  // than at the first day's closing one.
+  let minimumCents = spendable.reduce((total, summary) => total + summary.startingCents, 0);
+  let minimumDate = forecast.startDate;
+  let cashOutDate: IsoDate | null = null;
+
+  const series = balances.series.map((point) => {
+    let cents = 0;
+    for (const summary of spendable) cents += point.cents[summary.account.id] ?? 0;
+
+    if (cents < minimumCents) {
+      minimumCents = cents;
+      minimumDate = point.date;
+    }
+    if (cents < 0 && cashOutDate === null) cashOutDate = point.date;
+
+    return { date: point.date, cents };
+  });
+
+  return { series, accountCount: spendable.length, minimumCents, minimumDate, cashOutDate };
+}
+
 export function accountKindLabel(kind: AccountKind): string {
   switch (kind) {
     case "CASH":
