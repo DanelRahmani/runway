@@ -1,4 +1,4 @@
-import { isTransferCategory, TAX_CATEGORY } from "@/lib/categories";
+import { isRunningCostCategory } from "@/lib/categories";
 import { addMonths, daysBetween } from "@/lib/dates";
 import { alignSeries } from "@/lib/forecast/aggregate";
 import { runProjection } from "@/lib/forecast/engine";
@@ -192,7 +192,7 @@ export const SCENARIO_PRESETS: readonly ScenarioPreset[] = [
       "Raises every active running cost by 10%. Savings transfers and tax are left alone — neither is a cost of living.",
     apply: (forecast) => {
       const scaled = forecast.recurringItems.map((item) =>
-        item.isActive && item.direction === "OUTFLOW" && isRunningCost(item.category)
+        item.isActive && item.direction === "OUTFLOW" && isRunningCostCategory(item.category)
           ? { ...item, amountCents: Math.round(item.amountCents * 1.1) }
           : item,
       );
@@ -207,18 +207,6 @@ export const SCENARIO_PRESETS: readonly ScenarioPreset[] = [
     },
   },
 ];
-
-/**
- * A cost of living, as opposed to money moved or tax set aside.
- *
- * The same partition `savingsSummary` uses, so "costs" means the same thing in
- * both places. An uncategorised outflow counts: the user did not say it was a
- * transfer, and quietly leaving it out would understate the increase.
- */
-function isRunningCost(category: string | undefined): boolean {
-  if (category === undefined) return true;
-  return category !== TAX_CATEGORY && !isTransferCategory(category);
-}
 
 /**
  * The presets that make sense for a given kind of forecast.

@@ -1,4 +1,5 @@
-import { daysBetween, eachDay, horizonEndDate } from "@/lib/dates";
+import { isRunningCostCategory } from "@/lib/categories";
+import { daysBetween, eachDay, horizonEndDate, nextWorkingDay } from "@/lib/dates";
 import { assertIntegerCents } from "@/lib/money";
 import { invoiceOccurrences, recurringOccurrences } from "@/lib/forecast/recurrence";
 import type {
@@ -10,6 +11,7 @@ import type {
   ProjectionDay,
   ProjectionEntry,
   ProjectionSummary,
+  RecurringItem,
 } from "@/types/forecast";
 
 /**
@@ -68,6 +70,14 @@ export function buildLedger(forecast: Forecast, startDate: IsoDate, endDate: Iso
   const ledger = emptyLedgerByDate(dates);
   const range = { rangeStart: startDate, rangeEnd: endDate, endDate: undefined } as const;
 
+  const seasonal = normalisedSeasonality(forecast.seasonalCostPercent);
+  const shiftWeekends = forecast.weekendShifting === true;
+  // Applied to recurring items and invoices — the entries whose date comes from a
+  // schedule. A one-off is a date the user typed, so moving it would silently
+  // contradict the date shown in its own table row.
+  const onTime = (date: IsoDate): IsoDate =>
+    shiftWeekends ? nextWorkingDay(date) : date;
+
   for (const item of forecast.recurringItems) {
     if (!item.isActive) continue;
     assertIntegerCents(item.amountCents, `recurring item "${item.name}"`);
@@ -80,17 +90,20 @@ export function buildLedger(forecast: Forecast, startDate: IsoDate, endDate: Iso
     });
 
     for (const date of occurrences) {
-      pushEntry(ledger, date, {
+      const landed = onTime(date);
+      pushEntry(ledger, landed, {
         source: "recurring",
         id: item.id,
         label: item.name,
         direction: item.direction,
-        amountCents: item.amountCents,
+        amountCents: seasonalAmount(item, landed, seasonal),
         category: item.category ?? UNCATEGORISED,
       });
     }
   }
 
+  // No `onTime` or seasonality here on purpose: a one-off is an exact date the user
+  // chose for a specific event, not a schedule to be interpreted.
   for (const item of forecast.oneOffItems) {
     assertIntegerCents(item.amountCents, `one-off item "${item.name}"`);
     if (item.amountCents === 0) continue;
@@ -120,7 +133,7 @@ export function buildLedger(forecast: Forecast, startDate: IsoDate, endDate: Iso
     );
 
     for (const date of occurrences) {
-      pushEntry(ledger, date, {
+      pushEntry(ledger, onTime(date), {
         source: "invoice",
         id: invoice.id,
         label: invoice.clientName,
@@ -134,6 +147,46 @@ export function buildLedger(forecast: Forecast, startDate: IsoDate, endDate: Iso
   }
 
   return ledger;
+}
+
+/**
+ * The seasonality factors, or `undefined` when there is nothing to apply.
+ *
+ * Returning `undefined` rather than a list of 100s keeps the ordinary case out of
+ * the arithmetic altogether, so a forecast that never touched seasonality takes
+ * exactly the code path it always did.
+ */
+function normalisedSeasonality(
+  percent: readonly number[] | undefined,
+): readonly number[] | undefined {
+  if (percent === undefined) return undefined;
+  if (percent.every((value) => value === 100)) return undefined;
+  return percent;
+}
+
+/**
+ * A recurring amount for the month it lands in.
+ *
+ * Seasonality applies to running costs only. A transfer is not a cost, tax is not
+ * the user's to vary, an invoice is income, and a one-off already carries a chosen
+ * date — scaling any of those would answer a question nobody asked. A month at 100
+ * is left alone rather than multiplied by one.
+ */
+function seasonalAmount(
+  item: RecurringItem,
+  date: IsoDate,
+  percent: readonly number[] | undefined,
+): number {
+  if (percent === undefined) return item.amountCents;
+  if (item.direction !== "OUTFLOW") return item.amountCents;
+  if (!isRunningCostCategory(item.category)) return item.amountCents;
+
+  const factor = percent[Number(date.slice(5, 7)) - 1];
+  if (factor === undefined || factor === 100) return item.amountCents;
+
+  // Rounded to whole cents: a percentage of an amount is not itself a whole number
+  // of them, and the ledger holds nothing else.
+  return Math.round((item.amountCents * factor) / 100);
 }
 
 /** Aggregates a ledger into a running balance, day by day. */

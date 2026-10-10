@@ -18,7 +18,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { createId } from "@/lib/utils";
+import {
+  SAFE_DAY_OF_MONTH_MAX,
+  nextDayOfMonthOnOrAfter,
+  splitIsoDate,
+} from "@/lib/dates";
+import { createId, ordinalDay } from "@/lib/utils";
 import { validateRecurringItem, type FieldErrors } from "@/lib/validation";
 import type {
   Account,
@@ -29,6 +34,12 @@ import type {
   RecurrenceAnchor,
   RecurringItem,
 } from "@/types/forecast";
+
+/** 1–28: the days every month has, so an anchor can never need clamping. */
+const DAY_OPTIONS: readonly number[] = Array.from(
+  { length: SAFE_DAY_OF_MONTH_MAX },
+  (_, index) => index + 1,
+);
 
 const FREQUENCIES: ReadonlyArray<{ value: Frequency; label: string }> = [
   { value: "WEEKLY", label: "Weekly" },
@@ -87,6 +98,7 @@ export function RecurringItemForm({
 
   // Weekly cadences have no month end to snap to, so the choice is not offered.
   const monthBased = frequency !== "WEEKLY" && frequency !== "BIWEEKLY";
+  const [, , startDayOfMonth = 1] = splitIsoDate(startDate);
 
   const handleSubmit = (event: React.FormEvent): void => {
     event.preventDefault();
@@ -198,6 +210,29 @@ export function RecurringItemForm({
               >
                 <option value="DAY">Same day as the start date</option>
                 <option value="MONTH_END">Last day of the month</option>
+              </select>
+            </Field>
+          ) : null}
+
+          {monthBased && anchor === "DAY" ? (
+            <Field
+              label="Which day of the month"
+              htmlFor="recurring-day"
+              hint="Moves the start date on to this day, so the item lands on it every month. Days 29–31 are left out because February has no such day — pick the last day of the month for those."
+            >
+              <select
+                id="recurring-day"
+                value={String(startDayOfMonth)}
+                onChange={(event) =>
+                  setStartDate(nextDayOfMonthOnOrAfter(startDate, Number(event.target.value)))
+                }
+                className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/40 h-9 w-full rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
+              >
+                {DAY_OPTIONS.map((day) => (
+                  <option key={day} value={String(day)}>
+                    The {ordinalDay(day)}
+                  </option>
+                ))}
               </select>
             </Field>
           ) : null}

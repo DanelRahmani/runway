@@ -5,9 +5,13 @@ import { ForecastForm, type ForecastFormValues } from "@/components/forms/Foreca
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatIsoDate, HORIZON_LABELS, horizonEndDate } from "@/lib/dates";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { MONTH_LABELS, formatIsoDate, HORIZON_LABELS, horizonEndDate } from "@/lib/dates";
 import { currencyName, formatCents } from "@/lib/money";
 import { KIND_LABELS } from "@/lib/sample";
+import { NEUTRAL_SEASONAL_COST_PERCENT } from "@/lib/validation";
 import type { Currency, Forecast } from "@/types/forecast";
 
 interface AssumptionsTabProps {
@@ -15,10 +19,46 @@ interface AssumptionsTabProps {
   update: (updater: (current: Forecast) => Forecast) => void;
 }
 
+/** A whole percentage that could stand for a month's running-cost multiplier. */
+function isSeasonPercent(raw: string): boolean {
+  const value = Number(raw);
+  return Number.isInteger(value) && value >= 0 && value <= 1_000;
+}
+
 /** The forecast's own setup, plus the derived facts a reader should know. */
 export function AssumptionsTab({ forecast, update }: AssumptionsTabProps) {
   const [editing, setEditing] = useState(false);
+  /*
+   * The seasonality grid is edited as text so a half-typed number never becomes a
+   * half-applied one: "1" on the way to "150" is a valid percentage, so committing
+   * on every keystroke would briefly say January costs 1% of normal.
+   */
+  const [seasonDraft, setSeasonDraft] = useState<string[]>(() =>
+    (forecast.seasonalCostPercent ?? NEUTRAL_SEASONAL_COST_PERCENT).map(String),
+  );
+  const seasonValid = seasonDraft.every(isSeasonPercent);
   const endDate = horizonEndDate(forecast.startDate, forecast.horizon);
+
+  const setMonthPercent = (index: number, raw: string): void => {
+    const next = [...seasonDraft];
+    next[index] = raw;
+    setSeasonDraft(next);
+
+    // Left uncommitted while any month is not a whole percentage.
+    if (!next.every(isSeasonPercent)) return;
+    update((current) => ({
+      ...current,
+      seasonalCostPercent: next.map((value) => Number(value)),
+    }));
+  };
+
+  const resetSeasonality = (): void => {
+    setSeasonDraft(NEUTRAL_SEASONAL_COST_PERCENT.map(String));
+    update((current) => ({
+      ...current,
+      seasonalCostPercent: NEUTRAL_SEASONAL_COST_PERCENT.slice(),
+    }));
+  };
 
   const activeRecurring = forecast.recurringItems.filter((item) => item.isActive);
   const inactiveRecurring = forecast.recurringItems.filter((item) => !item.isActive);
@@ -80,6 +120,76 @@ export function AssumptionsTab({ forecast, update }: AssumptionsTabProps) {
               <dd className="text-sm whitespace-pre-wrap">{forecast.notes}</dd>
             </div>
           ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>When money moves</CardTitle>
+          <CardDescription>
+            Two assumptions that change the shape of the curve without changing the plan.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-5">
+          <div className="flex items-start justify-between gap-4 rounded-md border px-3 py-2.5">
+            <Label htmlFor="weekend-shifting" className="flex-col items-start gap-0.5">
+              <span className="text-xs font-medium">Nothing moves at the weekend</span>
+              <span className="text-muted-foreground text-xs font-normal">
+                Anything dated Saturday or Sunday is treated as happening on the Monday. Recurring
+                items and expected invoices shift; a one-off keeps the exact date you gave it.
+              </span>
+            </Label>
+            <Switch
+              id="weekend-shifting"
+              checked={forecast.weekendShifting === true}
+              onCheckedChange={(checked) =>
+                update((current) => ({ ...current, weekendShifting: checked }))
+              }
+            />
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1">
+              <p className="text-xs font-medium">Seasonal running costs</p>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                100 is a normal month, so 150 makes that month's running costs half as expensive
+                again. Transfers, tax, income and one-off items are never scaled. Every month at 100
+                means nothing changes.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+              {MONTH_LABELS.map((month, index) => (
+                <label key={month} className="flex flex-col gap-1">
+                  <span className="text-muted-foreground font-mono text-[0.625rem] tracking-wide uppercase">
+                    {month}
+                  </span>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={1_000}
+                    step={5}
+                    inputMode="numeric"
+                    value={seasonDraft[index] ?? "100"}
+                    onChange={(event) => setMonthPercent(index, event.target.value)}
+                    className="h-8 px-2 text-center text-xs"
+                    aria-label={`${month} running cost percentage`}
+                  />
+                </label>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <Button variant="outline" size="sm" onClick={resetSeasonality}>
+                Reset to normal
+              </Button>
+              {seasonValid ? null : (
+                <span className="text-muted-foreground text-xs">
+                  Whole percentages only — nothing is applied until all twelve are numbers.
+                </span>
+              )}
+            </div>
+          </div>
         </CardContent>
       </Card>
 

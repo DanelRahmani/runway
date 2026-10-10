@@ -154,6 +154,29 @@ export const forecastGoalSchema = z.object({
   targetDate: isoDateSchema,
 });
 
+/** Months in a calendar year. Shared so the engine, the form and the schema agree. */
+export const MONTHS_PER_YEAR = 12;
+
+/**
+ * Twelve integer percentages, January first, where `100` is a normal month.
+ *
+ * Zero is allowed — a month with no running costs at all — and the ceiling is
+ * 1000%, past which it is a typo rather than a plan. The length is fixed because a
+ * short array would silently leave later months unscaled.
+ */
+export const seasonalCostPercentSchema = z
+  .array(z.number().int("Use whole percentages").min(0).max(1_000, "That is implausibly high"))
+  .length(MONTHS_PER_YEAR, `Seasonality needs ${MONTHS_PER_YEAR} months`);
+
+/**
+ * The seasonality factors with every month at 100 — the state a forecast is in when
+ * it has never touched the feature. Used by the form to draw the grid from scratch.
+ */
+export const NEUTRAL_SEASONAL_COST_PERCENT: readonly number[] = Array.from(
+  { length: MONTHS_PER_YEAR },
+  () => 100,
+);
+
 export const forecastSchema = z.object({
   id: z.string().min(1),
   name: requiredText(80, "Give your forecast a name"),
@@ -169,6 +192,10 @@ export const forecastSchema = z.object({
   // Likewise optional for accounts: a forecast without them still projects, with
   // the spending account synthesised from its starting balance.
   accounts: z.array(accountSchema).max(20, "Too many accounts").optional(),
+  // Both optional, so a forecast saved or exported before them still loads and
+  // projects exactly as it did.
+  weekendShifting: z.boolean().optional(),
+  seasonalCostPercent: seasonalCostPercentSchema.optional(),
   recurringItems: z.array(recurringItemSchema).max(200, "Too many recurring items"),
   oneOffItems: z.array(oneOffItemSchema).max(400, "Too many one-off items"),
   invoices: z.array(invoiceSchema).max(200, "Too many invoices"),

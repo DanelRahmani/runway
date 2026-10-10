@@ -176,6 +176,22 @@ export interface Forecast {
    * it is optional — the spending account is synthesised and needs no record.
    */
   accounts?: Account[];
+  /**
+   * Move anything dated on a Saturday or Sunday to the Monday.
+   *
+   * Absent means dates are taken literally, which is what every forecast saved
+   * before this option did — so an existing forecast projects exactly as before.
+   */
+  weekendShifting?: boolean;
+  /**
+   * A per-month multiplier for running costs, as integer percentages in calendar
+   * order: index 0 is January, and `100` is a normal month. Absent means every
+   * month is normal.
+   *
+   * Only running costs are scaled — not transfers, not tax and not income — and the
+   * engine leaves the amount alone entirely when a month sits at 100.
+   */
+  seasonalCostPercent?: number[];
   recurringItems: RecurringItem[];
   oneOffItems: OneOffItem[];
   invoices: Invoice[];

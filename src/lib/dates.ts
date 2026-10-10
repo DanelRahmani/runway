@@ -14,7 +14,8 @@ const ISO_DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 export const DAY_MS = 86_400_000;
 
-const MONTH_LABELS = [
+/** Month names, January first. Exported for labels that are not dates themselves. */
+export const MONTH_LABELS = [
   "Jan",
   "Feb",
   "Mar",
@@ -109,6 +110,57 @@ export function compareIsoDate(a: IsoDate, b: IsoDate): number {
 
 export function minIsoDate(a: IsoDate, b: IsoDate): IsoDate {
   return a <= b ? a : b;
+}
+
+/** The largest day of the month that every month has, and so the only safe anchor. */
+export const SAFE_DAY_OF_MONTH_MAX = 28;
+
+/**
+ * The first date on or after `from` that falls on day `day` of its month.
+ *
+ * Deliberately limited to days 1–28, which exist in every month. "The 31st" has no
+ * February, and the way a monthly item anchors means clamping once would pin it to
+ * the 28th for the rest of the year — a silent change of meaning. For a payment
+ * that has to land at the end of the month, the month-end anchor exists and clamps
+ * on purpose.
+ */
+export function nextDayOfMonthOnOrAfter(from: IsoDate, day: number): IsoDate {
+  if (!Number.isInteger(day) || day < 1 || day > SAFE_DAY_OF_MONTH_MAX) {
+    throw new RangeError(
+      `Runway: a day of the month must be 1–${SAFE_DAY_OF_MONTH_MAX}, got ${day}`,
+    );
+  }
+
+  const [year = 0, month = 1, dayOfMonth = 1] = splitIsoDate(from);
+  if (dayOfMonth <= day) return makeIsoDate(year, month, day);
+
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const nextYear = month === 12 ? year + 1 : year;
+  return makeIsoDate(nextYear, nextMonth, day);
+}
+
+/** Saturday or Sunday. */
+export function isWeekend(value: IsoDate): boolean {
+  const weekday = parseIsoDate(value).getUTCDay();
+  return weekday === 0 || weekday === 6;
+}
+
+/**
+ * The same date, or the Monday when it falls on a weekend.
+ *
+ * One rule for both directions, so nothing is ever moved earlier than promised. A
+ * salary due on a Saturday would often be credited on the Friday, but a runway
+ * forecast has no business assuming money arrives early — the pessimistic reading
+ * is the one worth planning against.
+ */
+export function nextWorkingDay(value: IsoDate): IsoDate {
+  let date = value;
+  // Two steps is the most a weekend can ever need; the bound is a guard, not a
+  // limit anyone should reach.
+  for (let step = 0; step < 7 && isWeekend(date); step += 1) {
+    date = addDays(date, 1);
+  }
+  return date;
 }
 
 /** Monday-based start of the ISO week. */

@@ -34,3 +34,25 @@ export function formatPercent(value: number, fractionDigits = 0, locale?: string
     maximumFractionDigits: fractionDigits,
   }).format(value);
 }
+
+/**
+ * `1` → `1st`, `11` → `11th`, `22` → `22nd`.
+ *
+ * The teens are the trap: taking the suffix from the last digit alone gives
+ * "11st" and "12nd". Same class of bug as pluralising by appending an `s`.
+ */
+export function ordinalDay(day: number): string {
+  const teens = day % 100;
+  if (teens >= 11 && teens <= 13) return `${day}th`;
+
+  switch (day % 10) {
+    case 1:
+      return `${day}st`;
+    case 2:
+      return `${day}nd`;
+    case 3:
+      return `${day}rd`;
+    default:
+      return `${day}th`;
+  }
+}

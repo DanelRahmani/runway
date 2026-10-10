@@ -200,3 +200,17 @@ export function categorySuggestions(
     return aScore - bScore;
   });
 }
+
+/**
+ * A cost of living, as opposed to money moved or tax set aside.
+ *
+ * The same partition `savingsSummary` uses, so "costs" means one thing everywhere
+ * it is named — the seasonality multipliers, the scenario preset that scales them
+ * and the spell-out of what the outflow donut shows. An uncategorised outflow
+ * counts: the user did not say it was a transfer, and leaving it out quietly would
+ * understate the cost either way.
+ */
+export function isRunningCostCategory(label: string | undefined): boolean {
+  if (label === undefined) return true;
+  return label !== TAX_CATEGORY && !isTransferCategory(label);
+}
