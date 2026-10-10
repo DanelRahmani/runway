@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { compareIsoDate } from "@/lib/dates";
+import { addMonths, compareIsoDate, horizonEndDate } from "@/lib/dates";
 import { runProjection } from "@/lib/forecast/engine";
 import { withExtraMonthlyCost } from "@/lib/forecast/sensitivity";
-import { maxSustainableMonthlyCost, requiredMonthlySaving } from "@/lib/forecast/solvers";
+import {
+  GOAL_PLAN_MAX_YEARS,
+  maxSustainableMonthlyCost,
+  planGoalSaving,
+} from "@/lib/forecast/solvers";
 import { goalProgress } from "@/lib/forecast/savings";
 import type { Forecast, RecurringItem } from "@/types/forecast";
 
@@ -116,29 +120,34 @@ describe("sustainable monthly cost", () => {
   });
 });
 
-describe("monthly saving a goal needs", () => {
+describe("the savings goal calculator", () => {
   const saver = makeForecast({
     startingBalanceCents: 100_000,
     recurringItems: [recurring(300_000, "INFLOW", "Salary")],
   });
 
-  /** Whether a given monthly saving reaches the goal in time, by the app's own measure. */
-  function reaches(amountCents: number, goal: { label: string; targetCents: number; targetDate: string }): boolean {
+  /**
+   * Whether a given monthly saving reaches the goal in time.
+   *
+   * Projected exactly to the goal's own date — the shortest window that can answer
+   * the question — rather than to whichever window the solver picked, so this does
+   * not restate the solver's own arithmetic.
+   */
+  function reaches(
+    amountCents: number,
+    goal: { label: string; targetCents: number; targetDate: string },
+  ): boolean {
     const target = runProjection(
       withExtraMonthlyCost(saver, amountCents, { name: "Goal saving", category: "Savings" }),
+      { endDate: goal.targetDate },
     );
     const progress = goalProgress(target, goal);
     return (
-      progress.reachedDate !== null &&
-      compareIsoDate(progress.reachedDate, goal.targetDate) <= 0
+      progress.reachedDate !== null && compareIsoDate(progress.reachedDate, goal.targetDate) <= 0
     );
   }
 
   it("asks for nothing when the plan already gets there", () => {
-    const goal = { label: "Buffer", targetCents: 50_000, targetDate: "2026-02-01" };
-
-    // A salary-only plan keeps nothing, so this goal is only reachable by saving;
-    // start from one that already saves and the answer has to be zero.
     const already = makeForecast({
       startingBalanceCents: 100_000,
       recurringItems: [
@@ -147,31 +156,84 @@ describe("monthly saving a goal needs", () => {
       ],
     });
 
-    expect(requiredMonthlySaving(already, goal)).toBe(0);
+    const plan = planGoalSaving(already, {
+      label: "Buffer",
+      targetCents: 50_000,
+      targetDate: "2026-02-01",
+    });
+
+    expect(plan.requiredMonthlyCents).toBe(0);
+    expect(plan.beyondLimit).toBe(false);
   });
 
   it("asks for an amount that works, and refuses to overstate it", () => {
     const goal = { label: "Japan", targetCents: 900_000, targetDate: "2026-03-31" };
-    const answer = requiredMonthlySaving(saver, goal);
+    const plan = planGoalSaving(saver, goal);
+    const amount = plan.requiredMonthlyCents;
 
-    expect(answer).not.toBeNull();
+    expect(amount).not.toBeNull();
     // The amount settles the goal...
-    expect(reaches(answer ?? 0, goal)).toBe(true);
+    expect(reaches(amount ?? 0, goal)).toBe(true);
     // ...and half of it does not, so the figure is not padded with slack.
-    expect(reaches(Math.floor((answer ?? 0) / 2), goal)).toBe(false);
+    expect(reaches(Math.floor((amount ?? 0) / 2), goal)).toBe(false);
   });
 
-  it("declines to answer when the target date is beyond the horizon", () => {
-    // There is no day out there to check an answer against, and a guess would look
-    // as confident as the real thing.
-    const goal = { label: "Deposit", targetCents: 900_000, targetDate: "2030-01-01" };
+  it("leaves a target inside the horizon alone", () => {
+    const plan = planGoalSaving(saver, {
+      label: "Inside",
+      targetCents: 300_000,
+      targetDate: "2026-03-01",
+    });
 
-    expect(requiredMonthlySaving(saver, goal)).toBeNull();
+    expect(plan.extended).toBe(false);
+    expect(plan.windowEnd).toBe(horizonEndDate(saver.startDate, saver.horizon));
   });
 
-  it("declines to answer when no amount arrives in time", () => {
-    const goal = { label: "Impossible", targetCents: 100_000_000_000, targetDate: "2026-01-01" };
+  it("projects past the horizon to answer for a far-off target", () => {
+    // This is the point of the calculator, and it used to answer "cannot say". The
+    // horizon is a display choice, not a limit on the arithmetic.
+    const goal = { label: "Deposit", targetCents: 9_000_000, targetDate: "2029-06-30" };
+    const plan = planGoalSaving(saver, goal);
 
-    expect(requiredMonthlySaving(saver, goal)).toBeNull();
+    expect(plan.beyondLimit).toBe(false);
+    expect(plan.extended).toBe(true);
+    expect(plan.windowEnd).toBe("2029-06-30");
+    expect(plan.requiredMonthlyCents).not.toBeNull();
+    // And the answer still holds when the engine is run out to that date.
+    expect(reaches(plan.requiredMonthlyCents ?? 0, goal)).toBe(true);
+  });
+
+  it("declines past the calculator's own limit instead of guessing", () => {
+    // Ten years out: income and costs holding that long is not an assumption worth
+    // dressing up as a number.
+    const plan = planGoalSaving(saver, {
+      label: "Retirement",
+      targetCents: 9_000_000,
+      targetDate: "2036-01-01",
+    });
+
+    expect(plan.beyondLimit).toBe(true);
+    expect(plan.requiredMonthlyCents).toBeNull();
+    expect(plan.windowEnd).toBe(addMonths(saver.startDate, GOAL_PLAN_MAX_YEARS * 12));
+  });
+
+  it("declines when no amount arrives in time", () => {
+    const plan = planGoalSaving(saver, {
+      label: "Impossible",
+      targetCents: 100_000_000_000,
+      targetDate: "2026-01-01",
+    });
+
+    expect(plan.requiredMonthlyCents).toBeNull();
+    // A different failure from having no answer to give at all, and the caller has
+    // to be able to tell them apart.
+    expect(plan.beyondLimit).toBe(false);
+  });
+
+  it("never mutates the forecast it was handed", () => {
+    const snapshot = structuredClone(saver);
+    planGoalSaving(saver, { label: "Japan", targetCents: 900_000, targetDate: "2029-03-31" });
+
+    expect(saver).toEqual(snapshot);
   });
 });

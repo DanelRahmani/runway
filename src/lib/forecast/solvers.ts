@@ -1,7 +1,8 @@
+import { addMonths, compareIsoDate, horizonEndDate } from "@/lib/dates";
 import { runProjection } from "@/lib/forecast/engine";
 import { withExtraMonthlyCost } from "@/lib/forecast/sensitivity";
 import { goalProgress } from "@/lib/forecast/savings";
-import type { Forecast, ForecastGoal } from "@/types/forecast";
+import type { Forecast, ForecastGoal, IsoDate } from "@/types/forecast";
 
 /**
  * Inverse questions.
@@ -106,18 +107,54 @@ export function maxSustainableMonthlyCost(forecast: Forecast): number | null {
 }
 
 /**
- * The monthly amount that has to be set aside to reach a goal by its own date.
+ * How far past its own start the goal calculator will project.
  *
- * `0` means the plan already gets there. `null` means the question has no answer
- * worth printing: either the target date sits beyond the horizon, so there is
- * nothing to check an answer against, or even an implausible monthly amount never
- * arrives in time.
- *
- * The extra money is filed as a transfer, because that is what sets money aside —
- * a category the engine already counts as kept rather than spent.
+ * Five years. Beyond that the answer rests on today's income and costs holding for
+ * half a decade, which has stopped being a forecast and become arithmetic wearing a
+ * forecast's clothes.
  */
-export function requiredMonthlySaving(forecast: Forecast, goal: ForecastGoal): number | null {
-  if (goal.targetDate > runProjection(forecast).endDate) return null;
+export const GOAL_PLAN_MAX_YEARS = 5;
+
+/** Months in a year. Local because this module must not import the schema. */
+const MONTHS_PER_YEAR = 12;
+
+export interface GoalPlan {
+  /** Monthly amount to set aside. `0` when the plan already gets there. */
+  requiredMonthlyCents: number | null;
+  /** The last day the answer was computed over. */
+  windowEnd: IsoDate;
+  /** True when that window runs past the forecast's own horizon. */
+  extended: boolean;
+  /** True when the target sits further out than the calculator will project. */
+  beyondLimit: boolean;
+}
+
+/**
+ * What it takes to reach a goal, projected as far as the goal's own date.
+ *
+ * The horizon is a display choice — thirteen weeks or a year of curve to look at —
+ * not a property of the arithmetic, so a target beyond it is no harder to calculate
+ * than one inside it. This runs the engine out to the target date and solves for the
+ * monthly amount that arrives in time, rather than refusing to answer.
+ *
+ * The extra money is filed as a transfer, because that is what setting money aside
+ * is: a category the engine already counts as kept rather than spent.
+ *
+ * `requiredMonthlyCents` is `null` in two different situations and the caller must
+ * keep them apart: the target is further out than the calculator will project
+ * (`beyondLimit`), or no affordable amount arrives in time.
+ */
+export function planGoalSaving(forecast: Forecast, goal: ForecastGoal): GoalPlan {
+  const start = forecast.startDate;
+  const limit = addMonths(start, GOAL_PLAN_MAX_YEARS * MONTHS_PER_YEAR);
+
+  if (compareIsoDate(goal.targetDate, limit) > 0) {
+    return { requiredMonthlyCents: null, windowEnd: limit, extended: true, beyondLimit: true };
+  }
+
+  const horizonEnd = horizonEndDate(start, forecast.horizon);
+  const extended = compareIsoDate(goal.targetDate, horizonEnd) > 0;
+  const windowEnd = extended ? goal.targetDate : horizonEnd;
 
   const reaches = (amountCents: number): boolean => {
     const target =
@@ -129,12 +166,23 @@ export function requiredMonthlySaving(forecast: Forecast, goal: ForecastGoal): n
             note: "Solver: the amount needed to reach the goal",
           });
 
-    const progress = goalProgress(runProjection(target), goal);
-    return progress.reachedDate !== null && progress.reachedDate <= goal.targetDate;
+    const progress = goalProgress(runProjection(target, { endDate: windowEnd }), goal);
+    return (
+      progress.reachedDate !== null && compareIsoDate(progress.reachedDate, goal.targetDate) <= 0
+    );
   };
 
-  if (reaches(0)) return 0;
-  if (!reaches(MAX_SEARCH_CENTS)) return null;
+  if (reaches(0)) {
+    return { requiredMonthlyCents: 0, windowEnd, extended, beyondLimit: false };
+  }
+  if (!reaches(MAX_SEARCH_CENTS)) {
+    return { requiredMonthlyCents: null, windowEnd, extended, beyondLimit: false };
+  }
 
-  return searchSmallest(reaches);
+  return {
+    requiredMonthlyCents: searchSmallest(reaches),
+    windowEnd,
+    extended,
+    beyondLimit: false,
+  };
 }

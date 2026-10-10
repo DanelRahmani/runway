@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { formatIsoDate } from "@/lib/dates";
 import { accountProjection } from "@/lib/forecast/accounts";
 import { emergencyFund, compositionSeries, goalProgress, keptCurve, savingsSummary } from "@/lib/forecast/savings";
-import { requiredMonthlySaving } from "@/lib/forecast/solvers";
+import { GOAL_PLAN_MAX_YEARS, planGoalSaving } from "@/lib/forecast/solvers";
 import { formatCents } from "@/lib/money";
 import { cn, formatPercent } from "@/lib/utils";
 import type {
@@ -273,14 +273,18 @@ function GoalCard({
   );
 
   /*
-   * What it would take to get there, which is the question the bar chart provokes.
-   * `null` means the projection cannot answer — the target sits beyond the horizon,
-   * or no plausible monthly amount arrives in time.
+   * What it would take to get there, which is the question the progress bar provokes.
+   * The horizon does not limit this: a target years out is projected out to its own
+   * date, up to the calculator's ceiling.
    */
-  const needed = useMemo(
-    () => (goal === undefined ? null : requiredMonthlySaving(forecast, goal)),
+  const plan = useMemo(
+    () => (goal === undefined ? null : planGoalSaving(forecast, goal)),
     [forecast, goal],
   );
+  const neededCents = plan?.requiredMonthlyCents ?? null;
+  const beyondLimit = plan?.beyondLimit === true;
+  const extended = plan?.extended === true;
+  const windowEnd = plan?.windowEnd;
 
   const save = (): void => {
     onGoalChange({ label: label.trim(), targetCents, targetDate });
@@ -393,12 +397,28 @@ function GoalCard({
               {goalVerdict(progress, currency)}
             </p>
 
-            {needed !== null && needed > 0 ? (
+            {beyondLimit ? (
               <p className="text-xs leading-relaxed">
-                Setting aside{" "}
-                <span className="font-medium">{formatCents(needed, currency)}</span> a month from now
-                would reach it by {formatIsoDate(progress.goal.targetDate)}.
+                That target is more than {GOAL_PLAN_MAX_YEARS} years out, which is further than the
+                calculator will project. Past that point, income and costs holding steady is an
+                assumption rather than a plan — bring the date in, or treat the target as a
+                direction rather than a deadline.
               </p>
+            ) : neededCents !== null && neededCents > 0 ? (
+              <div className="flex flex-col gap-1">
+                <p className="text-xs leading-relaxed">
+                  Setting aside{" "}
+                  <span className="font-medium">{formatCents(neededCents, currency)}</span> a month
+                  from now would reach it by {formatIsoDate(progress.goal.targetDate)}.
+                </p>
+                {extended && windowEnd !== undefined ? (
+                  <p className="text-muted-foreground text-xs leading-relaxed">
+                    That date sits past this forecast&apos;s own horizon, so the calculation was
+                    projected out to {formatIsoDate(windowEnd)} instead. It assumes today&apos;s
+                    income and costs hold all the way there — planning arithmetic, not a forecast.
+                  </p>
+                ) : null}
+              </div>
             ) : null}
 
             <div className="flex flex-wrap gap-2">
