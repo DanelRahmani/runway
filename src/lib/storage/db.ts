@@ -16,16 +16,44 @@ export interface StoredForecast extends Forecast {
   archived: boolean;
 }
 
+/**
+ * One saved version of a forecast.
+ *
+ * Kept apart from the forecast itself so a version survives the forecast being
+ * deleted — which is the accident this exists for. The only way to erase them is
+ * "clear all local data", which takes them with it.
+ */
+export interface ForecastSnapshot {
+  id: string;
+  forecastId: string;
+  /** When it was taken, as an ISO instant. */
+  createdAt: string;
+  /** Why it was kept, so the list reads as a history rather than a pile. */
+  reason: string;
+  forecast: StoredForecast;
+}
+
 const DATABASE_NAME = "runway";
 
 class RunwayDatabase extends Dexie {
   forecasts!: Table<StoredForecast, string>;
+  snapshots!: Table<ForecastSnapshot, string>;
 
   constructor() {
     super(DATABASE_NAME);
     this.version(1).stores({
       // Only indexed columns are listed; the rest of the object is stored as-is.
       forecasts: "id, name, updatedAt, archived",
+    });
+    /*
+     * Version 2 adds the snapshot table. Dexie migrates in place, so an existing
+     * database keeps every forecast and simply gains the new table — an upgrade,
+     * not a reset. Both stores are redeclared because a version's declaration is
+     * the whole schema for the stores it names.
+     */
+    this.version(2).stores({
+      forecasts: "id, name, updatedAt, archived",
+      snapshots: "id, forecastId, createdAt",
     });
   }
 }
@@ -81,6 +109,7 @@ export function toStoredForecast(forecast: Forecast): StoredForecast {
  * The upgrade path is a sessionStorage mirror if anyone needs reload survival.
  */
 const memoryStore = new Map<string, StoredForecast>();
+const memorySnapshots = new Map<string, ForecastSnapshot>();
 
 export const memoryBackend = {
   all(): StoredForecast[] {
@@ -97,5 +126,20 @@ export const memoryBackend = {
   },
   clear(): void {
     memoryStore.clear();
+  },
+  snapshots(): ForecastSnapshot[] {
+    return [...memorySnapshots.values()];
+  },
+  putSnapshot(snapshot: ForecastSnapshot): void {
+    memorySnapshots.set(snapshot.id, snapshot);
+  },
+  getSnapshot(id: string): ForecastSnapshot | undefined {
+    return memorySnapshots.get(id);
+  },
+  deleteSnapshot(id: string): void {
+    memorySnapshots.delete(id);
+  },
+  clearSnapshots(): void {
+    memorySnapshots.clear();
   },
 };

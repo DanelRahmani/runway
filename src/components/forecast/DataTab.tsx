@@ -2,6 +2,7 @@ import { AlertCircleIcon, CheckCircle2Icon, DownloadIcon, UploadIcon } from "luc
 import { useRef, useState } from "react";
 
 import { ConfirmDialog } from "@/components/forms/ConfirmDialog";
+import { VersionHistory } from "@/components/forecast/VersionHistory";
 import { Alert, AlertDescription, AlertIcon, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -278,6 +279,8 @@ export function DataTab({ forecast, projection }: DataTabProps) {
           ) : null}
         </CardContent>
       </Card>
+
+      <VersionHistory forecast={forecast} />
 
       <Card className="border-destructive/40">
         <CardHeader>

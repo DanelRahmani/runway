@@ -6,14 +6,15 @@ import {
   memoryBackend,
   probeStorage,
   toStoredForecast,
+  type ForecastSnapshot,
   type StorageStatus,
   type StoredForecast,
 } from "@/lib/storage/db";
 import { createId } from "@/lib/utils";
 import type { Currency, Forecast, ForecastKind, Horizon } from "@/types/forecast";
 
-// Re-exported so UI code can name the persisted shape without importing db.ts.
-export type { StorageStatus, StoredForecast };
+// Re-exported so UI code can name the persisted shapes without importing db.ts.
+export type { ForecastSnapshot, StorageStatus, StoredForecast };
 
 /**
  * The single source of truth for stored forecasts.
@@ -217,6 +218,18 @@ export async function setArchived(id: string, archived: boolean): Promise<void> 
 
 export async function deleteForecast(id: string): Promise<void> {
   await probeStorage();
+
+  /*
+   * Deleting is the one action with no other way back, and the confirm dialog is a
+   * single click, so the copy is kept here rather than resting on that click. The
+   * snapshot outlives the forecast on purpose — that is the whole point — which is
+   * why the dialog now says the delete can be undone rather than that it is
+   * permanent. "Clear all local data" is the action that erases for real, and it
+   * takes the snapshots with it.
+   */
+  const existing = findForecast(id);
+  if (existing !== undefined) await recordSnapshot(existing, "Before deleting");
+
   if (getStorageStatus().available) {
     await db.forecasts.delete(id);
   } else {
@@ -225,20 +238,137 @@ export async function deleteForecast(id: string): Promise<void> {
   await reload();
 }
 
+/**
+ * Erases everything, snapshots included.
+ *
+ * The snapshots are not a separate courtesy here: a user who asks for their data to
+ * be gone is entitled to have it gone, and leaving restorable copies behind would
+ * quietly contradict that.
+ */
 export async function clearAllForecasts(): Promise<void> {
   await probeStorage();
   if (getStorageStatus().available) {
     await db.forecasts.clear();
+    await db.snapshots.clear();
   } else {
     memoryBackend.clear();
+    memoryBackend.clearSnapshots();
   }
   await reload();
 }
 
 /** Replaces the entire store. Backs the "replace" import mode. */
 export async function replaceAllForecasts(forecasts: Forecast[]): Promise<void> {
+  await probeStorage();
+
+  // An import in replace mode wipes what is there. The user chose the mode, but not
+  // necessarily with the current contents in mind.
+  for (const existing of listForecasts()) {
+    await recordSnapshot(existing, "Before an import replaced everything");
+  }
+
   await clearAllForecasts();
   await saveForecasts(forecasts);
+}
+
+/* --------------------------------------------------------------- snapshots */
+
+/** How many versions of one forecast are kept before the oldest is dropped. */
+export const SNAPSHOTS_PER_FORECAST = 20;
+
+/** A long reason stops being a reason and starts being a paragraph. */
+const SNAPSHOT_REASON_MAX = 80;
+
+async function readSnapshots(forecastId: string): Promise<ForecastSnapshot[]> {
+  if (!getStorageStatus().available) {
+    return memoryBackend.snapshots().filter((snapshot) => snapshot.forecastId === forecastId);
+  }
+  return db.snapshots.where("forecastId").equals(forecastId).toArray();
+}
+
+/**
+ * Keeps a copy of a forecast as it stands.
+ *
+ * Deliberately not called on every autosave. A history that grows while you type is
+ * noise, and what is worth recovering from is a decision rather than a keystroke —
+ * so this runs before anything irreversible, and when the user asks for it.
+ */
+export async function recordSnapshot(forecast: Forecast, reason: string): Promise<void> {
+  await probeStorage();
+
+  const snapshot: ForecastSnapshot = {
+    id: createId(),
+    forecastId: forecast.id,
+    createdAt: new Date().toISOString(),
+    reason: reason.slice(0, SNAPSHOT_REASON_MAX),
+    forecast: toStoredForecast(forecast),
+  };
+
+  if (getStorageStatus().available) await db.snapshots.put(snapshot);
+  else memoryBackend.putSnapshot(snapshot);
+
+  await pruneSnapshots(forecast.id);
+}
+
+/** Newest first. */
+export async function listSnapshots(forecastId: string): Promise<ForecastSnapshot[]> {
+  await probeStorage();
+  const snapshots = await readSnapshots(forecastId);
+  return snapshots.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+/** Every snapshot, newest first — how a deleted forecast is found again. */
+export async function listAllSnapshots(): Promise<ForecastSnapshot[]> {
+  await probeStorage();
+  const snapshots = getStorageStatus().available
+    ? await db.snapshots.toArray()
+    : memoryBackend.snapshots();
+  return snapshots.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+/**
+ * Puts a snapshot back.
+ *
+ * Restoring is itself reversible: the state being replaced is snapshotted first, so
+ * a mis-clicked restore does not become the mistake it was meant to undo.
+ */
+export async function restoreSnapshot(snapshotId: string): Promise<StoredForecast | null> {
+  await probeStorage();
+
+  const snapshot = getStorageStatus().available
+    ? await db.snapshots.get(snapshotId)
+    : memoryBackend.getSnapshot(snapshotId);
+  if (snapshot === undefined) return null;
+
+  const current = findForecast(snapshot.forecastId);
+  if (current !== undefined) {
+    await recordSnapshot(current, "Before restoring an earlier version");
+  }
+
+  // The id is the snapshot's own forecast id, so restoring a deleted forecast
+  // brings it back under the id its scenarios still point at.
+  return saveForecast({ ...snapshot.forecast, id: snapshot.forecastId });
+}
+
+export async function forgetSnapshot(snapshotId: string): Promise<void> {
+  await probeStorage();
+  if (getStorageStatus().available) await db.snapshots.delete(snapshotId);
+  else memoryBackend.deleteSnapshot(snapshotId);
+}
+
+/** Keeps the newest few versions and drops the rest. */
+async function pruneSnapshots(forecastId: string): Promise<void> {
+  const existing = (await readSnapshots(forecastId)).sort((a, b) =>
+    b.createdAt.localeCompare(a.createdAt),
+  );
+  const excess = existing.slice(SNAPSHOTS_PER_FORECAST);
+  if (excess.length === 0) return;
+
+  if (getStorageStatus().available) {
+    await db.snapshots.bulkDelete(excess.map((snapshot) => snapshot.id));
+  } else {
+    for (const snapshot of excess) memoryBackend.deleteSnapshot(snapshot.id);
+  }
 }
 
 /* -------------------------------------------------------------------- hook */

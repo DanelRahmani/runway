@@ -393,7 +393,7 @@ export function ForecastPage() {
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
         title={`Delete "${forecast.name}"?`}
-        description="This permanently removes the forecast from this browser. Export a backup from the Data tab first if you might want it back."
+        description="Removes the forecast from this browser. A copy is kept in the version history on the Data tab, so this can be undone."
         confirmLabel="Delete forecast"
         onConfirm={() => {
           void deleteForecast(forecast.id).then(() => {

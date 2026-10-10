@@ -219,7 +219,7 @@ export function Home() {
         open={pendingDelete !== null}
         onOpenChange={(open) => (open ? undefined : setPendingDelete(null))}
         title={`Delete "${pendingDelete?.name ?? ""}"?`}
-        description="This permanently removes the forecast from this browser. Export a backup first if you might want it back."
+        description="Removes the forecast from this browser. A copy is kept in the version history on the Data page, so this can be undone."
         confirmLabel="Delete forecast"
         onConfirm={() => {
           const target = pendingDelete;
