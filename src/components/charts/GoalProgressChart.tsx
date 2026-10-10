@@ -74,7 +74,12 @@ export function GoalProgressChart({
   const domain = paddedDomain(boundsOf([...points.map((point) => point.cumulativeCents), targetCents]));
 
   return (
-    <div style={{ height }} className="w-full">
+    <div
+      style={{ height }}
+      className="w-full"
+      role="img"
+      aria-label={`Money kept over the horizon, reaching ${formatCents(points[points.length - 1]?.cumulativeCents ?? 0, currency)} against a target of ${formatCents(targetCents, currency)}`}
+    >
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={points.slice()} margin={{ top: 8, right: 12, bottom: 0, left: 4 }}>
           <CartesianGrid stroke={CHART_COLORS.grid} strokeDasharray="2 4" vertical={false} />

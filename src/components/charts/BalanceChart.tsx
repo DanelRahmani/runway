@@ -82,7 +82,12 @@ export function BalanceChart({
     minimumDate !== undefined ? data.find((point) => point.date === minimumDate) : undefined;
 
   return (
-    <div style={{ height }} className="w-full">
+    <div
+      style={{ height }}
+      className="w-full"
+      role="img"
+      aria-label={`Balance from ${formatIsoDate(data[0]?.date ?? "")} to ${formatIsoDate(data[data.length - 1]?.date ?? "")}, closing at ${formatCents(data[data.length - 1]?.balanceCents ?? 0, currency)}${minimumDate === undefined ? "" : `, lowest ${formatCents(minimumCents ?? 0, currency)} on ${formatIsoDate(minimumDate)}`}`}
+    >
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data.slice()} margin={{ top: 16, right: 16, bottom: 4, left: 4 }}>
           <defs>

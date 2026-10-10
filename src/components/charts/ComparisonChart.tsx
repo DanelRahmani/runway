@@ -73,7 +73,12 @@ export function ComparisonChart({
       : undefined;
 
   return (
-    <div style={{ height }} className="w-full">
+    <div
+      style={{ height }}
+      className="w-full"
+      role="img"
+      aria-label={`${baseLabel} and ${scenarioLabel} compared from ${formatIsoDate(data[0]?.date ?? "")} to ${formatIsoDate(data[data.length - 1]?.date ?? "")}${divergenceDate === undefined || divergenceDate === null ? "" : `. They diverge most on ${formatIsoDate(divergenceDate)}`}`}
+    >
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data.slice()} margin={{ top: 16, right: 16, bottom: 4, left: 4 }}>
           <CartesianGrid stroke={CHART_COLORS.grid} strokeDasharray="2 4" vertical={false} />
