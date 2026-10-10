@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { boundsOf, paddedDomain } from "@/components/charts/chart-utils";
+import { HEAT_LEVELS, boundsOf, heatLevel, paddedDomain } from "@/components/charts/chart-utils";
 import { formatCentsCompact, formatCentsTick } from "@/lib/money";
 
 /*
@@ -47,5 +47,37 @@ describe("money axes", () => {
     // The guard is the point of formatCents; loosening it for ticks must not
     // loosen it for money.
     expect(() => formatCentsCompact(1_234.5, "EUR")).toThrow(/integer number of cents/);
+  });
+});
+
+describe("annual heat levels", () => {
+  it("puts zero on the dullest step and the bound on the brightest", () => {
+    expect(heatLevel(0, 1_000)).toBe(0);
+    expect(heatLevel(1_000, 1_000)).toBe(HEAT_LEVELS - 1);
+  });
+
+  it("reads a loss as strongly as a gain of the same size", () => {
+    // The caller colours by sign; intensity is about magnitude, because a bad
+    // month is exactly as worth finding as a good one.
+    expect(heatLevel(-1_000, 1_000)).toBe(heatLevel(1_000, 1_000));
+  });
+
+  it("never leaves the range, however far past the bound a value goes", () => {
+    for (const value of [0, 1, 500, 1_000, 5_000, 1_000_000, -1_000_000]) {
+      const level = heatLevel(value, 1_000);
+      expect(level).toBeGreaterThanOrEqual(0);
+      expect(level).toBeLessThanOrEqual(HEAT_LEVELS - 1);
+    }
+  });
+
+  it("steps up rather than rounding a real movement away", () => {
+    // Any movement at all has to leave the dullest step, or a small but genuine
+    // month looks identical to a month with nothing in it.
+    expect(heatLevel(1, 1_000)).toBeGreaterThan(0);
+  });
+
+  it("survives a bound of zero instead of dividing by it", () => {
+    expect(heatLevel(0, 0)).toBe(0);
+    expect(heatLevel(500, 0)).toBe(0);
   });
 });

@@ -14,7 +14,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { formatIsoDate } from "@/lib/dates";
 import { accountProjection } from "@/lib/forecast/accounts";
-import { compositionSeries, goalProgress, keptCurve, savingsSummary } from "@/lib/forecast/savings";
+import { emergencyFund, compositionSeries, goalProgress, keptCurve, savingsSummary } from "@/lib/forecast/savings";
+import { requiredMonthlySaving } from "@/lib/forecast/solvers";
 import { formatCents } from "@/lib/money";
 import { cn, formatPercent } from "@/lib/utils";
 import type {
@@ -49,6 +50,16 @@ export function SavingsTab({
   const currency = forecast.currency;
   const summary = useMemo(() => savingsSummary(projection), [projection]);
   const balances = useMemo(() => accountProjection(forecast, projection), [forecast, projection]);
+
+  /*
+   * Cover is measured against what is actually spendable — the same figure the
+   * accounts panel leads with — rather than against total wealth, because a
+   * pension pot does not buy groceries this month.
+   */
+  const fund = useMemo(
+    () => emergencyFund(projection, balances.spendableClosingCents),
+    [projection, balances.spendableClosingCents],
+  );
   // Monthly by default: the mix moves on a monthly rhythm, and weekly columns
   // make it hard to see that rhythm through the noise.
   const [compositionStep, setCompositionStep] = useState<Granularity>("monthly");
@@ -104,10 +115,19 @@ export function SavingsTab({
               <AnimatedMoney cents={summary.monthlyKeptCents} currency={currency} />
             </Figure>
           </dl>
+
+          <p className="text-muted-foreground mt-4 text-xs leading-relaxed">
+            {fund.coveredMonths === null
+              ? "There is no essential spending in this horizon, so there is nothing to measure cover against."
+              : fund.coveredMonths >= 24
+                ? `Your spendable cash would cover over two years of essentials, which run at ${formatCents(fund.essentialMonthlyCents, currency)} a month.`
+                : `Your spendable cash would cover about ${fund.coveredMonths.toFixed(1)} months of essentials, which run at ${formatCents(fund.essentialMonthlyCents, currency)} a month.`}
+          </p>
         </CardContent>
       </Card>
 
       <GoalCard
+        forecast={forecast}
         projection={projection}
         currency={currency}
         goal={forecast.goal}
@@ -223,11 +243,13 @@ export function SavingsTab({
  * optimistically reporting "on track".
  */
 function GoalCard({
+  forecast,
   projection,
   currency,
   goal,
   onGoalChange,
 }: {
+  forecast: Forecast;
   projection: Projection;
   currency: Currency;
   goal: ForecastGoal | undefined;
@@ -248,6 +270,16 @@ function GoalCard({
   const kept = useMemo(
     () => (goal === undefined ? [] : keptCurve(projection)),
     [projection, goal],
+  );
+
+  /*
+   * What it would take to get there, which is the question the bar chart provokes.
+   * `null` means the projection cannot answer — the target sits beyond the horizon,
+   * or no plausible monthly amount arrives in time.
+   */
+  const needed = useMemo(
+    () => (goal === undefined ? null : requiredMonthlySaving(forecast, goal)),
+    [forecast, goal],
   );
 
   const save = (): void => {
@@ -360,6 +392,14 @@ function GoalCard({
             >
               {goalVerdict(progress, currency)}
             </p>
+
+            {needed !== null && needed > 0 ? (
+              <p className="text-xs leading-relaxed">
+                Setting aside{" "}
+                <span className="font-medium">{formatCents(needed, currency)}</span> a month from now
+                would reach it by {formatIsoDate(progress.goal.targetDate)}.
+              </p>
+            ) : null}
 
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={() => setEditing(true)}>

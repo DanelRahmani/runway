@@ -72,6 +72,38 @@ export function savingsSummary(projection: Projection): SavingsSummary {
   };
 }
 
+export interface EmergencyFund {
+  /** Average monthly essential outflow — spending, with tax and transfers left out. */
+  essentialMonthlyCents: number;
+  /** Spendable cash divided by that, floored at zero. `null` when nothing essential goes out. */
+  coveredMonths: number | null;
+}
+
+/**
+ * How long the money you can actually spend would cover your essentials.
+ *
+ * "Essentials" are the spending part of the same three-way split the Savings tab
+ * reports — tax is not a cost of living and a transfer is not a cost at all.
+ * Keeping the definition here rather than in the view means the number and the
+ * donut beside it can never disagree about what spending is.
+ */
+export function emergencyFund(projection: Projection, spendableCents: number): EmergencyFund {
+  const spending = savingsSummary(projection).spendingCents;
+  const months = projection.days.length === 0 ? 0 : projection.days.length / DAYS_PER_MONTH;
+  const essentialMonthlyCents = months === 0 ? 0 : Math.round(spending / months);
+
+  return {
+    essentialMonthlyCents,
+    /*
+     * Floored at zero: a negative balance covers nothing, and reporting "-1.2
+     * months" invites arithmetic on a number that has no meaning. The shortfall
+     * itself is already on the dashboard, where it belongs.
+     */
+    coveredMonths:
+      essentialMonthlyCents === 0 ? null : Math.max(0, spendableCents) / essentialMonthlyCents,
+  };
+}
+
 export interface CompositionPeriod {
   key: string;
   startDate: IsoDate;

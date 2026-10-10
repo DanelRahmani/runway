@@ -35,8 +35,9 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForecastEditor } from "@/hooks/useForecastEditor";
 import { useShortcut } from "@/hooks/useShortcut";
-import { HORIZON_LABELS } from "@/lib/dates";
+import { HORIZON_LABELS, todayIso } from "@/lib/dates";
 import { runProjection } from "@/lib/forecast/engine";
+import { staleness } from "@/lib/forecast/insights";
 import { KIND_LABELS } from "@/lib/sample";
 import { deleteForecast, duplicateForecast, useForecasts } from "@/lib/storage/forecasts";
 
@@ -169,6 +170,9 @@ export function ForecastPage() {
     setSearchParams(value === "overview" ? {} : { tab: value }, { replace: true });
   };
 
+  // Pure and cheap — no engine run — so it needs no memo.
+  const stale = staleness(forecast, todayIso());
+
   return (
     <AppShell
       wide
@@ -215,6 +219,9 @@ export function ForecastPage() {
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <SaveIndicator state={saveState} />
+              {stale !== null ? (
+                <span className="text-muted-foreground text-xs">{stale.text}</span>
+              ) : null}
               {baseForecast !== undefined ? (
                 <Link
                   to={`/forecast/${baseForecast.id}`}

@@ -84,3 +84,20 @@ export const SERIES_COLORS = [
 export function seriesColor(index: number): string {
   return SERIES_COLORS[index % SERIES_COLORS.length] ?? "var(--chart-1)";
 }
+
+/** Intensity steps the annual grid uses, including "nothing happened". */
+export const HEAT_LEVELS = 5;
+
+/**
+ * Which intensity step a value falls on: 0 (dullest) to `HEAT_LEVELS - 1`.
+ *
+ * Scaled against the largest absolute value in the set rather than a fixed
+ * amount, so the same grid reads the same in yen as in euro. Signed by magnitude
+ * only — the caller picks the direction's colour from the sign — because a month
+ * that lost as much as another gained is equally worth looking at.
+ */
+export function heatLevel(value: number, bound: number): number {
+  if (bound <= 0) return 0;
+  const scaled = Math.abs(value) / bound;
+  return Math.min(HEAT_LEVELS - 1, Math.ceil(scaled * (HEAT_LEVELS - 1)));
+}

@@ -78,17 +78,30 @@ export function costUpliftSensitivity(
   return { baseMonthlyOutflowCents, rows };
 }
 
-/** A copy carrying one more active monthly outflow. */
-function withExtraMonthlyCost(forecast: Forecast, amountCents: number): Forecast {
+/**
+ * A copy carrying one more active monthly outflow.
+ *
+ * Exported because the solvers search for an amount using the same lever this
+ * table displays — one definition of "add this much per month" rather than two
+ * that could disagree.
+ */
+export function withExtraMonthlyCost(
+  forecast: Forecast,
+  amountCents: number,
+  options: { name?: string; category?: string; note?: string } = {},
+): Forecast {
   const item: RecurringItem = {
     id: createId(),
-    name: "Higher running costs",
+    name: options.name ?? "Higher running costs",
     direction: "OUTFLOW",
     amountCents,
     frequency: "MONTHLY",
     startDate: forecast.startDate,
-    note: "What-if: running costs above plan",
+    note: options.note ?? "What-if: running costs above plan",
     isActive: true,
+    // No category by default: an uncategorised outflow is counted as a running
+    // cost everywhere else, so a fabricated category here would be a lie.
+    ...(options.category === undefined ? {} : { category: options.category }),
   };
 
   return { ...forecast, recurringItems: [...forecast.recurringItems, item] };

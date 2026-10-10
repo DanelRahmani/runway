@@ -4,6 +4,7 @@ import { foldToDonutSlices } from "@/lib/donut";
 import { runProjection } from "@/lib/forecast/engine";
 import {
   compositionSeries,
+  emergencyFund,
   goalProgress,
   keptCurve,
   savingsSummary,
@@ -341,5 +342,52 @@ describe("composition over time", () => {
       expect(period.keptCents).toBeGreaterThanOrEqual(0);
       expect(period.taxCents).toBeGreaterThanOrEqual(0);
     }
+  });
+});
+
+/*
+ * "How long would my money last if the income stopped?" is the question an
+ * emergency fund answers, and the answer has to be built from the same partition
+ * the rest of the Savings tab uses — spending only, because tax is not a cost of
+ * living and a transfer is not a cost at all. If those two ever leak in, the cover
+ * figure quietly gets shorter for everyone.
+ */
+describe("emergency fund cover", () => {
+  const housingOnly = makeForecast({
+    oneOffItems: [oneOff(120_000, "Housing", "2026-01-05")],
+  });
+  const withExtras = makeForecast({
+    oneOffItems: [
+      oneOff(120_000, "Housing", "2026-01-05"),
+      oneOff(60_000, "Tax", "2026-01-06"),
+      oneOff(60_000, "Savings", "2026-01-07"),
+    ],
+  });
+
+  it("does not let tax or a transfer inflate the cost of living", () => {
+    expect(emergencyFund(runProjection(withExtras), 0).essentialMonthlyCents).toBe(
+      emergencyFund(runProjection(housingOnly), 0).essentialMonthlyCents,
+    );
+  });
+
+  it("scales with the cash available", () => {
+    const projection = runProjection(withExtras);
+    const single = emergencyFund(projection, 300_000).coveredMonths;
+    const doubled = emergencyFund(projection, 600_000).coveredMonths;
+
+    expect(single).not.toBeNull();
+    expect(doubled).toBeCloseTo((single ?? 0) * 2, 6);
+  });
+
+  it("reports no cover rather than a negative one when the balance is under water", () => {
+    // "-1.2 months" invites arithmetic on a number that has no meaning; the
+    // shortfall itself is already on the dashboard.
+    expect(emergencyFund(runProjection(withExtras), -50_000).coveredMonths).toBe(0);
+  });
+
+  it("declines to divide when nothing essential goes out", () => {
+    const taxOnly = makeForecast({ oneOffItems: [oneOff(50_000, "Tax", "2026-01-05")] });
+
+    expect(emergencyFund(runProjection(taxOnly), 100_000).coveredMonths).toBeNull();
   });
 });

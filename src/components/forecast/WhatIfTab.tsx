@@ -12,6 +12,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatIsoDate } from "@/lib/dates";
 import { costUpliftSensitivity } from "@/lib/forecast/sensitivity";
+import { maxSustainableMonthlyCost } from "@/lib/forecast/solvers";
 import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import type { Forecast } from "@/types/forecast";
@@ -27,6 +28,8 @@ import type { Forecast } from "@/types/forecast";
 export function WhatIfTab({ forecast }: { forecast: Forecast }) {
   const currency = forecast.currency;
   const result = useMemo(() => costUpliftSensitivity(forecast), [forecast]);
+  // The inverse of the table below, and the number people actually want.
+  const headroom = useMemo(() => maxSustainableMonthlyCost(forecast), [forecast]);
   const noOutflows = result.baseMonthlyOutflowCents === 0;
 
   return (
@@ -47,43 +50,72 @@ export function WhatIfTab({ forecast }: { forecast: Forecast }) {
               breaks.
             </p>
           ) : (
-            <TableWrapper>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Costs</TableHead>
-                    <TableHead className="text-right">Extra per month</TableHead>
-                    <TableHead className="text-right">Ending balance</TableHead>
-                    <TableHead className="text-right">Cash-out date</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {result.rows.map((row) => (
-                    <TableRow key={row.percent} className={cn(row.percent === 0 && "bg-muted/40")}>
-                      <TableCell className="font-medium">
-                        {row.percent === 0 ? "As planned" : `${row.percent}% higher`}
-                      </TableCell>
-                      <TableCell className="tnum text-right">
-                        {row.extraMonthlyCents === 0
-                          ? "—"
-                          : formatCents(row.extraMonthlyCents, currency)}
-                      </TableCell>
-                      <TableCell
-                        className={cn(
-                          "tnum text-right",
-                          row.endingBalanceCents < 0 && "text-negative",
-                        )}
-                      >
-                        {formatCents(row.endingBalanceCents, currency)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {row.cashOutDate === null ? "No shortfall" : formatIsoDate(row.cashOutDate)}
-                      </TableCell>
+            <div className="flex flex-col gap-4">
+              <div className="bg-muted/50 rounded-lg border p-4">
+                {headroom === null ? (
+                  <p className="text-sm leading-relaxed">
+                    <span className="text-negative font-medium">No room left.</span> The plan already
+                    closes below zero, so there is no extra monthly cost it can absorb — the table
+                    below shows how much worse each step makes it.
+                  </p>
+                ) : headroom === 0 ? (
+                  <p className="text-sm leading-relaxed">
+                    <span className="font-medium">Exactly no room.</span> The balance lands on zero
+                    and no lower, so one more cent of monthly cost takes it under.
+                  </p>
+                ) : (
+                  <p className="text-sm leading-relaxed">
+                    There is room for{" "}
+                    <span className="font-medium">{formatCents(headroom, currency)}</span> more a
+                    month — the largest extra running cost this plan absorbs without ever closing
+                    below zero.
+                  </p>
+                )}
+              </div>
+
+              <TableWrapper>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Costs</TableHead>
+                      <TableHead className="text-right">Extra per month</TableHead>
+                      <TableHead className="text-right">Ending balance</TableHead>
+                      <TableHead className="text-right">Cash-out date</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableWrapper>
+                  </TableHeader>
+                  <TableBody>
+                    {result.rows.map((row) => (
+                      <TableRow
+                        key={row.percent}
+                        className={cn(row.percent === 0 && "bg-muted/40")}
+                      >
+                        <TableCell className="font-medium">
+                          {row.percent === 0 ? "As planned" : `${row.percent}% higher`}
+                        </TableCell>
+                        <TableCell className="tnum text-right">
+                          {row.extraMonthlyCents === 0
+                            ? "—"
+                            : formatCents(row.extraMonthlyCents, currency)}
+                        </TableCell>
+                        <TableCell
+                          className={cn(
+                            "tnum text-right",
+                            row.endingBalanceCents < 0 && "text-negative",
+                          )}
+                        >
+                          {formatCents(row.endingBalanceCents, currency)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {row.cashOutDate === null
+                            ? "No shortfall"
+                            : formatIsoDate(row.cashOutDate)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableWrapper>
+            </div>
           )}
         </CardContent>
       </Card>
