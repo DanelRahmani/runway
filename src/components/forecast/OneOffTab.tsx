@@ -19,6 +19,7 @@ import {
   TableWrapper,
 } from "@/components/ui/table";
 import { useSelection, withoutCategory } from "@/hooks/useSelection";
+import { useShortcut } from "@/hooks/useShortcut";
 import { compareIsoDate, formatIsoDate, horizonEndDate } from "@/lib/dates";
 import {
   ALL_FILTER,
@@ -60,6 +61,10 @@ export function OneOffTab({ forecast, update }: OneOffTabProps) {
   const [category, setCategory] = useState(ALL_FILTER);
   const [sort, setSort] = useState("date-asc");
   const [pendingBulkDelete, setPendingBulkDelete] = useState(false);
+
+  // `n` does what the Add button does. Ignored while typing or behind a dialog,
+  // and written as an updater so it cannot remount an open form and lose a draft.
+  useShortcut("new-item", () => setEditing((current) => current ?? { item: null }));
 
   const itemIds = useMemo(() => forecast.oneOffItems.map((item) => item.id), [forecast.oneOffItems]);
   const selection = useSelection(itemIds);

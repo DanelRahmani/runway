@@ -17,6 +17,7 @@ import {
   TableRow,
   TableWrapper,
 } from "@/components/ui/table";
+import { useShortcut } from "@/hooks/useShortcut";
 import { addDays, formatIsoDate } from "@/lib/dates";
 import { impactFor, itemImpact } from "@/lib/forecast/engine";
 import {
@@ -82,6 +83,10 @@ export function InvoicesTab({ forecast, projection, update }: InvoicesTabProps) 
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState(ALL_FILTER);
   const [sort, setSort] = useState("projected-asc");
+
+  // `n` does what the Add invoice button does. Ignored while typing or behind a
+  // dialog, and written as an updater so it cannot remount an open form.
+  useShortcut("new-item", () => setEditing((current) => current ?? { invoice: null }));
 
   const impacts = useMemo(() => itemImpact(projection), [projection]);
 

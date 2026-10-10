@@ -15,6 +15,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { ConfirmDialog } from "@/components/forms/ConfirmDialog";
 import { AppShell } from "@/components/layout/AppShell";
 import { ErrorBoundary } from "@/components/layout/ErrorBoundary";
+import { ShortcutsHelp } from "@/components/layout/ShortcutsHelp";
 import { AssumptionsTab } from "@/components/forecast/AssumptionsTab";
 import { DataTab } from "@/components/forecast/DataTab";
 import { GraphDrawer } from "@/components/forecast/GraphDrawer";
@@ -33,6 +34,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForecastEditor } from "@/hooks/useForecastEditor";
+import { useShortcut } from "@/hooks/useShortcut";
 import { HORIZON_LABELS } from "@/lib/dates";
 import { runProjection } from "@/lib/forecast/engine";
 import { KIND_LABELS } from "@/lib/sample";
@@ -79,6 +81,11 @@ export function ForecastPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
+  // `?` opens the list. Declared before the loading and not-found returns, since
+  // a hook may not be called conditionally.
+  useShortcut("help", () => setShowShortcuts(true));
 
   const { forecast, loading, notFound, saveState, update, lastError } = useForecastEditor(id);
   const { forecasts } = useForecasts();
@@ -387,6 +394,8 @@ export function ForecastPage() {
           });
         }}
       />
+
+      <ShortcutsHelp open={showShortcuts} onOpenChange={setShowShortcuts} />
 
       <PrintSummary forecast={forecast} projection={projection} />
     </AppShell>

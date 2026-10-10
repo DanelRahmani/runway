@@ -21,6 +21,7 @@ import {
   TableWrapper,
 } from "@/components/ui/table";
 import { useSelection, withoutCategory } from "@/hooks/useSelection";
+import { useShortcut } from "@/hooks/useShortcut";
 import { formatIsoDate } from "@/lib/dates";
 import { impactFor, itemImpact } from "@/lib/forecast/engine";
 import {
@@ -242,6 +243,11 @@ export function RecurringTab({ forecast, projection, update }: RecurringTabProps
       }));
     });
   };
+
+  // The same thing the "Add your first item" button does, from the keyboard.
+  // Written as an updater so pressing `n` with the form already open cannot
+  // remount it and wipe a half-typed item.
+  useShortcut("new-item", () => setEditing((current) => current ?? { item: null }));
 
   const incomeTotal = forecast.recurringItems
     .filter((item) => item.isActive && item.direction === "INFLOW")
