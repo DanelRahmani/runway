@@ -161,7 +161,7 @@ export function AssumptionsTab({ forecast, update }: AssumptionsTabProps) {
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
               {MONTH_LABELS.map((month, index) => (
                 <label key={month} className="flex flex-col gap-1">
-                  <span className="text-muted-foreground font-mono text-[0.625rem] tracking-wide uppercase">
+                  <span className="text-muted-foreground font-mono text-[0.6875rem]">
                     {month}
                   </span>
                   <Input

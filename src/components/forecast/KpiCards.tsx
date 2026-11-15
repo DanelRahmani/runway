@@ -31,8 +31,8 @@ export function KpiCard({ label, value, hint, tone = "neutral", icon, delayMs = 
       style={{ "--rise-delay": `${delayMs}ms` } as CSSProperties}
     >
       <CardContent className="flex flex-col gap-1.5 pt-5">
-        {/* The engraved label register: mono, small, letterspaced, uppercase. */}
-        <div className="text-muted-foreground flex items-center gap-1.5 font-mono text-[0.6875rem] font-medium tracking-wide uppercase">
+        {/* The woven label: mono, small, sentence case. */}
+        <div className="text-muted-foreground flex items-center gap-1.5 font-mono text-xs">
           {icon}
           {label}
         </div>
@@ -43,7 +43,7 @@ export function KpiCard({ label, value, hint, tone = "neutral", icon, delayMs = 
          */}
         <p
           className={cn(
-            "font-display text-2xl leading-none break-all sm:text-3xl",
+            "font-figure text-2xl leading-none break-all sm:text-3xl",
             tone === "positive" && "text-positive",
             tone === "negative" && "text-negative",
           )}

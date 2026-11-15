@@ -299,7 +299,7 @@ function AccountRow({
     >
       <span className="flex min-w-0 items-center gap-2">
         <span className="truncate text-sm font-medium">{name}</span>
-        <span className="text-muted-foreground font-mono text-[0.625rem] tracking-wide uppercase">
+        <span className="text-muted-foreground font-mono text-[0.6875rem]">
           {accountKindLabel(kind)}
         </span>
         {/* Named as a percentage right where the growth figure is read, so the
@@ -468,10 +468,10 @@ function AccountForm({
 function Figure({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
-      <dt className="text-muted-foreground font-mono text-[0.6875rem] font-medium tracking-wide uppercase">
+      <dt className="text-muted-foreground font-mono text-xs">
         {label}
       </dt>
-      <dd className="font-display tnum text-xl leading-tight">{children}</dd>
+      <dd className="font-figure tnum text-xl leading-tight">{children}</dd>
     </div>
   );
 }

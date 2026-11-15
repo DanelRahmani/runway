@@ -4,142 +4,136 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Runway's visual language.
+ * Runway's visual language, taken from the danelrahmani.com design system:
+ * warm editorial minimalism with an atelier thread.
  *
- *   ground   #F7F8FA cool white   / #07080B near-black
- *   surface  #FFFFFF              / #0D0F14
- *   ink      #0B0D12              / #F4F6F9
- *   accent   #E11D48 rose         / #FF4D6D rose
- *   gain     #0D9488 teal         / #2FE0A0 mint
+ *   ground   #FDFBF6 creme cloth    / #0F090E aubergine-black
+ *   panel    #FAF6ED                / #150D14
+ *   ink      #1C1917                / #F4EFEA
+ *   accent   #4A0E0E maroon thread  / #D43D55 raspberry
  *
  * Three decisions worth stating:
  *
- * 1. Dark is the default presentation. Dashboards of this kind lead with the
- *    dark surface and figures carry better against it. The switcher still offers
- *    light and system, and light is a complete theme rather than an afterthought.
+ * 1. Two grounds and one thread. The accent carries identity: links, the primary
+ *    button, focus, active states and the stitch. Rules and borders are tinted
+ *    toward it, never neutral grey, and shadows are maroon-tinted in light.
  *
- * 2. The accent is one hue doing two jobs — identity and alarm — so primary
- *    buttons stay ink/white and the solid accent fill is reserved for destructive
- *    actions. A delete button should be the loudest thing on screen, not the
- *    thing you are most likely to press by accident.
+ * 2. Because the accent is now the primary action, destructive actions take their
+ *    own brick red so that "delete" never looks like "continue".
  *
- * 3. Depth comes from layered surfaces and restrained motion rather than flat
- *    seams: a 1px border, a soft top-light and a 1px hover lift. Elevation is
- *    present but never heavy.
+ * 3. The signature device is the basting stitch: a dashed accent line marking
+ *    seams between sections and the "active" state of tabs and navigation.
  */
 
 :root {
-  --radius: 0.625rem;
+  --radius: 1rem;
 
-  --background: #f7f8fa;
-  --foreground: #0b0d12;
-  --card: #ffffff;
-  --card-foreground: #0b0d12;
-  --popover: #ffffff;
-  --popover-foreground: #0b0d12;
+  --background: #fdfbf6;
+  --foreground: #1c1917;
+  --card: #faf6ed;
+  --card-foreground: #1c1917;
+  --popover: #fdfbf6;
+  --popover-foreground: #1c1917;
 
-  /* Ink, not accent: see decision 2 above. */
-  --primary: #0b0d12;
+  --primary: #4a0e0e;
   --primary-foreground: #ffffff;
 
-  --secondary: #eef0f4;
-  --secondary-foreground: #0b0d12;
-  --muted: #f1f3f7;
-  --muted-foreground: #5b6472;
-  --accent: #e11d48;
+  /* `tint`: secondary button fill, pressed chip fill, tag pills. */
+  --secondary: rgba(74, 14, 14, 0.06);
+  --secondary-foreground: #4a0e0e;
+  --muted: #f5efe2;
+  /* The 4.5:1 floor on creme: never set grey lighter than this. */
+  --muted-foreground: #57534e;
+  --accent: #4a0e0e;
   --accent-foreground: #ffffff;
-  /*
-   * The darker step. The rose fill only reaches 4.7:1 on white, which is thin for
-   * small text, so text uses the deeper shade where the fill would not carry.
-   */
-  --accent-text: #be123c;
-  --accent-hover: #be123c;
+  --accent-text: #4a0e0e;
+  --accent-hover: #6b1515;
 
-  --destructive: #e11d48;
+  --destructive: #b42318;
   --destructive-foreground: #ffffff;
 
-  /* Hairlines are cool and neutral; the accent carries emphasis instead. */
-  --border: rgba(11, 13, 18, 0.1);
-  --border-strong: rgba(11, 13, 18, 0.2);
-  --input: rgba(11, 13, 18, 0.2);
-  --ring: #e11d48;
+  /* `hairline` and `seam`: tinted toward the thread. */
+  --border: rgba(74, 14, 14, 0.12);
+  --border-strong: rgba(74, 14, 14, 0.24);
+  --seam: rgba(74, 14, 14, 0.3);
+  --input: rgba(74, 14, 14, 0.24);
+  --ring: #4a0e0e;
 
-  --positive: #0d9488;
-  --positive-muted: rgba(13, 148, 136, 0.1);
-  --negative: #e11d48;
-  --negative-muted: rgba(225, 29, 72, 0.08);
+  --positive: #2f6b4f;
+  --positive-muted: rgba(47, 107, 79, 0.1);
+  --negative: #b42318;
+  --negative-muted: rgba(180, 35, 24, 0.08);
 
-  --chart-balance: #0b0d12;
-  --chart-scenario: #e11d48;
+  --chart-balance: #1c1917;
+  --chart-scenario: #8c1d2c;
 
   /*
-   * Categorical scale for the donuts. Vivid and mutually distinguishable, which
-   * is what a ring needs; six stays the ceiling because past that the wedges stop
-   * being comparable. Colour is never the only signal — every slice carries its
-   * label and share in the legend beside it.
+   * Categorical scale for the donuts, in the same warm register as the cloth:
+   * thread, bottle green, ochre, indigo, plum, teal. Six stays the ceiling and
+   * every slice carries its label and share in the legend beside it.
    */
-  --chart-1: #e11d48;
-  --chart-2: #0d9488;
-  --chart-3: #7c3aed;
-  --chart-4: #2563eb;
-  --chart-5: #ea580c;
-  --chart-6: #0891b2;
+  --chart-1: #8c1d2c;
+  --chart-2: #2f6b4f;
+  --chart-3: #b7791f;
+  --chart-4: #3b5b8a;
+  --chart-5: #7b4b8f;
+  --chart-6: #2a7f86;
 
-  --shadow-tint: rgba(11, 13, 18, 0.06);
-  --shadow-tint-strong: rgba(11, 13, 18, 0.12);
+  --shadow-tint: rgba(74, 14, 14, 0.06);
+  --shadow-tint-strong: rgba(74, 14, 14, 0.14);
 }
 
 .dark {
-  --background: #07080b;
-  --foreground: #f4f6f9;
-  --card: #0d0f14;
-  --card-foreground: #f4f6f9;
-  --popover: #14171e;
-  --popover-foreground: #f4f6f9;
+  --background: #0f090e;
+  --foreground: #f4efea;
+  --card: #150d14;
+  --card-foreground: #f4efea;
+  --popover: #1a1119;
+  --popover-foreground: #f4efea;
 
-  --primary: #f4f6f9;
-  --primary-foreground: #07080b;
-
-  --secondary: #171b23;
-  --secondary-foreground: #f4f6f9;
-  --muted: #12151c;
-  --muted-foreground: #98a1b0;
-  --accent: #ff4d6d;
+  --primary: #d43d55;
   /*
-   * Dark text on the bright rose fill. White on #FF4D6D is only 3.3:1, which
-   * fails for button labels, whereas near-black clears 6.9:1 — and reads crisper
-   * against a vivid fill anyway.
+   * White on the raspberry is about 4.2:1; the site ships it on semibold labels
+   * and so do the buttons here, which are 14px semibold.
    */
-  --accent-foreground: #0b0d0f;
-  --accent-text: #ff8098;
-  --accent-hover: #ff8098;
+  --primary-foreground: #ffffff;
 
-  --destructive: #ff4d6d;
-  --destructive-foreground: #0b0d0f;
+  --secondary: rgba(212, 61, 85, 0.1);
+  --secondary-foreground: #f4efea;
+  --muted: #1a1119;
+  --muted-foreground: #a8a29e;
+  --accent: #d43d55;
+  --accent-foreground: #ffffff;
+  --accent-text: #e8566a;
+  --accent-hover: #e8566a;
 
-  --border: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.16);
-  --input: rgba(255, 255, 255, 0.16);
-  --ring: #ff4d6d;
+  --destructive: #f97066;
+  --destructive-foreground: #1c0a0a;
 
-  --positive: #2fe0a0;
-  --positive-muted: rgba(47, 224, 160, 0.12);
-  --negative: #ff5d7d;
-  --negative-muted: rgba(255, 93, 125, 0.12);
+  --border: rgba(168, 162, 158, 0.18);
+  --border-strong: rgba(168, 162, 158, 0.3);
+  --seam: rgba(212, 61, 85, 0.32);
+  --input: rgba(168, 162, 158, 0.3);
+  --ring: #d43d55;
 
-  --chart-balance: #f4f6f9;
-  --chart-scenario: #ff4d6d;
+  --positive: #5cc595;
+  --positive-muted: rgba(92, 197, 149, 0.12);
+  --negative: #f97066;
+  --negative-muted: rgba(249, 112, 102, 0.12);
+
+  --chart-balance: #f4efea;
+  --chart-scenario: #e8566a;
 
   /* Same order as light, so a slice keeps its identity when the theme flips. */
-  --chart-1: #ff4d6d;
-  --chart-2: #2fe0a0;
-  --chart-3: #a78bfa;
-  --chart-4: #60a5fa;
-  --chart-5: #fb923c;
-  --chart-6: #22d3ee;
+  --chart-1: #e8566a;
+  --chart-2: #5cc595;
+  --chart-3: #e0a84a;
+  --chart-4: #7fa3d6;
+  --chart-5: #b98bd0;
+  --chart-6: #4fb8bf;
 
-  --shadow-tint: rgba(0, 0, 0, 0.4);
-  --shadow-tint-strong: rgba(0, 0, 0, 0.6);
+  --shadow-tint: rgba(0, 0, 0, 0.35);
+  --shadow-tint-strong: rgba(212, 61, 85, 0.16);
 }
 
 @theme inline {
@@ -168,6 +162,7 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
+  --color-seam: var(--seam);
   --color-input: var(--input);
   --color-ring: var(--ring);
 
@@ -185,8 +180,7 @@
   --color-chart-6: var(--chart-6);
 
   --font-display:
-    "Geist Variable", "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
+    "Bodoni Moda Variable", "Bodoni Moda", Didot, "Bodoni MT", Georgia, serif;
   --font-sans:
     "Geist Variable", "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
@@ -213,15 +207,23 @@
   }
 
   /*
-   * The display face. A geometric grotesque with tight tracking is what the rest
-   * of the field sets figures and headings in; the old Didone read as editorial
-   * rather than financial.
+   * The display face: Bodoni Moda, the engraved garment label. It brands
+   * headings; figures stay in Geist (`.font-figure`) where tabular, crisp digits
+   * matter more than flourish. A didone needs no tightening beyond -0.02em.
    */
   .font-display {
     font-family: var(--font-display);
     font-weight: 600;
-    letter-spacing: -0.032em;
+    letter-spacing: -0.02em;
     text-wrap: balance;
+  }
+
+  /* Figures: KPI values and statistics. Geist, semibold, tabular. */
+  .font-figure {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    font-variant-numeric: tabular-nums;
   }
 
   /*
@@ -279,12 +281,12 @@
 }
 
 @layer utilities {
-  /* A seam: the accent-tinted hairline that separates sections. */
+  /* A seam: the basting stitch as a section divider, tinted toward the thread. */
   .seam {
-    border-top: 1px solid var(--border);
+    border-top: 1px dashed var(--seam);
   }
 
-  /* Hover lift: a 1px rise and a deeper shadow, never a heavy one. */
+  /* Hover lift: a 2px rise to the maroon-tinted lift shadow. */
   .lift {
     transition:
       background-color 200ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -294,100 +296,66 @@
   }
 
   .lift:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 10px 28px -14px var(--shadow-tint-strong);
+    transform: translateY(-2px);
+    box-shadow:
+      0 2px 4px -2px var(--shadow-tint),
+      0 12px 24px -4px var(--shadow-tint-strong);
+  }
+
+  /* Resting panel shadow, maroon-tinted in light. */
+  .shadow-rest {
+    box-shadow:
+      0 1px 2px -1px var(--shadow-tint),
+      0 2px 4px 0 var(--shadow-tint);
   }
 
   /*
-   * Entrance animation.
+   * Entrance animation: rises 14px from a 5px blur.
    *
-   * `--rise-delay` staggers a group without a JS timeline: set it per item and the
-   * sequence reads as orchestrated rather than simultaneous. The curve decelerates
-   * into place so the page settles instead of performing, and the reduced-motion
-   * rule in the base layer neutralises every bit of it.
+   * `--rise-delay` staggers a group without a JS timeline. One orchestrated
+   * entrance per page; the reduced-motion rule in the base layer shows the
+   * finished state at once.
    */
   .rise {
-    animation: runway-rise 460ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: runway-rise 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
     animation-delay: var(--rise-delay, 0ms);
   }
 
-  /*
-   * Layered surface: a barely-there light from above, so a card reads as a
-   * surface rather than as a filled rectangle.
-   */
-  .surface {
-    background-image: linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--foreground) 4%, transparent),
-      transparent 42%
-    );
-  }
-
-  /* Accent bloom, for the one figure that matters most on a screen. */
-  .glow-accent {
-    position: relative;
-    isolation: isolate;
-  }
-
-  .glow-accent::before {
-    content: "";
-    position: absolute;
-    inset: -60% -25%;
-    z-index: -1;
+  /* The single faint radial tint allowed behind the hero. */
+  .hero-tint {
     background: radial-gradient(
-      45% 50% at 50% 42%,
-      color-mix(in srgb, var(--accent) 42%, transparent),
-      transparent 72%
+      55% 60% at 22% 0%,
+      color-mix(in srgb, var(--accent) 7%, transparent),
+      transparent 70%
     );
-    filter: blur(30px);
-    opacity: 0.45;
-    pointer-events: none;
   }
 
   /*
-   * Slow travelling gradient, for the headline.
-   *
-   * Deliberately avoids `color-mix`: this one is paired with `text-transparent`,
-   * and a gradient that fails to parse would leave invisible text rather than a
-   * plain one. Both stops already exist as custom properties.
+   * The stitch underline, sewn in under the hero headline on load: 1.5px, dash 9,
+   * gap 7, round caps. Drawn with an SVG so the caps stay round.
    */
-  .gradient-pan {
-    background-image: linear-gradient(
-      100deg,
-      var(--accent) 0%,
-      var(--foreground) 50%,
-      var(--accent) 100%
-    );
-    background-size: 250% 100%;
-    animation: runway-pan 7s linear infinite;
+  .stitch-underline {
+    animation: runway-sew 600ms cubic-bezier(0.22, 1, 0.36, 1) 200ms both;
   }
 
-  /* Faint dot grid, for hero backdrops. */
-  .dot-grid {
-    background-image: radial-gradient(
-      color-mix(in srgb, var(--foreground) 14%, transparent) 1px,
-      transparent 1px
-    );
-    background-size: 22px 22px;
+  @keyframes runway-sew {
+    from {
+      clip-path: inset(0 100% 0 0);
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+    }
   }
 
   @keyframes runway-rise {
     from {
       opacity: 0;
-      transform: translateY(10px);
+      transform: translateY(14px);
+      filter: blur(5px);
     }
     to {
       opacity: 1;
       transform: none;
-    }
-  }
-
-  @keyframes runway-pan {
-    from {
-      background-position: 0% 50%;
-    }
-    to {
-      background-position: -250% 50%;
     }
   }
 
@@ -397,7 +365,7 @@
    * long list settles quickly instead of the last row arriving a beat late.
    */
   .rise-stagger > * {
-    animation: runway-rise 460ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: runway-rise 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   .rise-stagger > *:nth-child(1) {

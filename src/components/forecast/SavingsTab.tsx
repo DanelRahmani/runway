@@ -462,10 +462,10 @@ function goalVerdict(progress: ReturnType<typeof goalProgress>, currency: Curren
 function Figure({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
-      <dt className="text-muted-foreground font-mono text-[0.6875rem] font-medium tracking-wide uppercase">
+      <dt className="text-muted-foreground font-mono text-xs">
         {label}
       </dt>
-      <dd className="font-display tnum text-xl leading-tight">{children}</dd>
+      <dd className="font-figure tnum text-xl leading-tight">{children}</dd>
     </div>
   );
 }

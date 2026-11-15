@@ -42,7 +42,7 @@ export function AppShell({ children, actions, wide = false }: AppShellProps) {
         Skip to content
       </a>
 
-      <header className="bg-background/85 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40 border-b backdrop-blur">
+      <header className="bg-background/85 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40 border-b border-dashed border-seam backdrop-blur">
         <div
           className={cn(
             "mx-auto flex min-h-14 w-full flex-wrap items-center gap-x-3 gap-y-2 py-2 px-4 sm:px-6",
@@ -52,7 +52,7 @@ export function AppShell({ children, actions, wide = false }: AppShellProps) {
           <a href="/" className="flex items-center gap-2" aria-label="Runway home">
             <RunwayMark />
             {/* The wordmark carries the accent thread, like the name on a label. */}
-            <span className="font-display text-accent-text text-lg tracking-tight">Runway</span>
+            <span className="font-display text-accent-text text-xl font-normal italic">Runway</span>
           </a>
           <nav aria-label="Main" className="flex items-center gap-0.5">
             {NAV_LINKS.map((link) => (
@@ -62,10 +62,10 @@ export function AppShell({ children, actions, wide = false }: AppShellProps) {
                 end={link.end}
                 className={({ isActive }) =>
                   cn(
-                    "focus-visible:ring-ring inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none",
+                    "focus-visible:ring-ring inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none",
                     isActive
-                      ? "bg-secondary text-foreground"
-                      : "text-muted-foreground hover:text-foreground",
+                      ? "border-accent bg-secondary text-accent-text border-dashed"
+                      : "text-muted-foreground hover:text-accent-text border-transparent",
                   )
                 }
               >
@@ -89,7 +89,7 @@ export function AppShell({ children, actions, wide = false }: AppShellProps) {
               rel="noreferrer noopener"
               aria-label="danelrahmani.com — Danel Rahmani's personal website"
               title="danelrahmani.com"
-              className="text-muted-foreground hover:text-foreground hover:bg-secondary focus-visible:ring-ring inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-xs transition-colors focus-visible:ring-2 focus-visible:outline-none"
+              className="text-muted-foreground hover:text-accent-text hover:bg-secondary focus-visible:ring-ring inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
               <GlobeIcon className="size-3.5" aria-hidden="true" />
               <span className="hidden sm:inline">danelrahmani.com</span>
@@ -191,11 +191,11 @@ function RunwayMark() {
       aria-hidden="true"
       focusable="false"
     >
-      <rect width="32" height="32" rx="7" className="fill-foreground" />
+      <rect width="32" height="32" rx="16" className="fill-primary" />
       <path
         d="M7 22.5 13 16l4 4 8-9"
-        className="stroke-primary"
-        strokeWidth="3"
+        className="stroke-background"
+        strokeWidth="2.5"
         fill="none"
         strokeLinecap="round"
         strokeLinejoin="round"

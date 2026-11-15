@@ -80,7 +80,7 @@ export function CashCalendar({
                   <th
                     key={label}
                     scope="col"
-                    className="text-muted-foreground pb-1 text-left font-mono text-[0.625rem] font-medium tracking-wide uppercase"
+                    className="text-muted-foreground pb-1 text-left font-mono text-[0.6875rem]"
                   >
                     {label}
                   </th>

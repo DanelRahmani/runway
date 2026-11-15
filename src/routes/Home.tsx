@@ -2,14 +2,11 @@ import {
   ArchiveIcon,
   ArchiveRestoreIcon,
   ArrowRightIcon,
-  CalendarClockIcon,
   CopyIcon,
   FileJsonIcon,
   PencilIcon,
   PlusIcon,
-  SparklesIcon,
   Trash2Icon,
-  TrendingDownIcon,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -93,7 +90,7 @@ export function Home() {
 
       <section aria-labelledby="forecasts-heading" className="seam flex flex-col gap-4 pt-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 id="forecasts-heading" className="font-display text-2xl tracking-tight">
+          <h2 id="forecasts-heading" className="font-display text-2xl">
             Your forecasts
           </h2>
           <div className="flex flex-wrap items-center gap-2">
@@ -240,72 +237,68 @@ function LandingHero({
   onStarter: (kind: ForecastKind) => void;
 }) {
   return (
-    <section className="relative flex flex-col gap-6 pt-2 sm:pt-6">
-      {/*
-       * Hero backdrop. A faint dot grid with an accent bloom, both faded out at
-       * the edges and pushed behind the content, so the headline sits on a lit
-       * surface rather than on flat background.
-       */}
+    <section className="relative flex flex-col gap-10 pt-2 sm:pt-8">
+      {/* The single faint radial tint the design system allows behind a hero. */}
       <div
         aria-hidden="true"
-        className="dot-grid pointer-events-none absolute inset-x-[-2rem] -top-10 -z-10 h-[24rem] opacity-70 [mask-image:radial-gradient(62%_58%_at_28%_0%,black,transparent)]"
-      />
-      <div
-        aria-hidden="true"
-        className="glow-accent pointer-events-none absolute -top-28 -left-10 -z-10 h-72 w-[34rem]"
+        className="hero-tint pointer-events-none absolute inset-x-0 -top-16 -z-10 h-[26rem]"
       />
 
-      <div className="rise-stagger flex max-w-2xl flex-col gap-3">
-        <Badge variant="muted" className="w-fit">
-          <SparklesIcon />
-          Private by design — nothing leaves your browser
-        </Badge>
-        <h1 className="font-display text-4xl leading-[1.05] tracking-tight text-balance sm:text-6xl">
-          Know when your{" "}
-          <span className="gradient-pan bg-clip-text text-transparent">cash runs out</span>.
+      <div className="rise-stagger flex max-w-2xl flex-col gap-4">
+        <p className="text-muted-foreground font-mono text-xs">
+          Private by design. Nothing leaves your browser.
+        </p>
+        <h1 className="font-display text-[2.75rem] leading-[1.05] font-normal italic sm:text-7xl">
+          Know when your cash runs out.
         </h1>
-        <p className="text-muted-foreground max-w-[68ch] text-base leading-relaxed sm:text-lg">
+        <svg
+          aria-hidden="true"
+          className="stitch-underline text-accent -mt-1 h-1.5 w-56"
+          viewBox="0 0 224 6"
+        >
+          <line
+            x1="2"
+            y1="3"
+            x2="222"
+            y2="3"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeDasharray="9 7"
+          />
+        </svg>
+        <p className="text-muted-foreground max-w-[62ch] text-base leading-7 sm:text-lg sm:leading-8">
           Runway turns your income, expenses and expected invoices into a day-by-day cash-flow
-          forecast — so you can see the shortfall coming, and test what happens when an assumption
+          forecast, so you can see the shortfall coming and test what happens when an assumption
           changes.
         </p>
       </div>
 
       {/* Two entry points, because a household and a business are not the same forecast. */}
-      <div className="rise-stagger grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-2">
-        <KindStartCard
-          kind="PERSONAL"
-          onCreate={onCreate}
-          onStarter={onStarter}
-        />
-        <KindStartCard
-          kind="BUSINESS"
-          onCreate={onCreate}
-          onStarter={onStarter}
-        />
+      <div className="rise-stagger grid max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2">
+        <KindStartCard kind="PERSONAL" onCreate={onCreate} onStarter={onStarter} />
+        <KindStartCard kind="BUSINESS" onCreate={onCreate} onStarter={onStarter} />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      {/* Editorial rows rather than a grid of icon cards: text, separated by seams. */}
+      <div className="seam grid grid-cols-1 gap-8 pt-8 sm:grid-cols-3">
         <FeatureCard
-          icon={<CalendarClockIcon className="size-4" />}
           title="Recurring cash flow"
           description="Rent, retainers, subscriptions and tax provisions repeat on their own schedule, month-end handled correctly."
         />
         <FeatureCard
-          icon={<TrendingDownIcon className="size-4" />}
           title="Invoice delays"
-          description="Project each invoice on its expected payment date plus your delay allowance — late payers show up as a real gap."
+          description="Each invoice lands on its expected payment date plus your delay allowance, so late payers show up as a real gap."
         />
         <FeatureCard
-          icon={<SparklesIcon className="size-4" />}
           title="Scenario planning"
-          description="“What if my biggest client pays 30 days late?” Duplicate, change one thing, and compare both outcomes."
+          description="What if your biggest client pays 30 days late? Duplicate, change one thing, and compare both outcomes."
         />
       </div>
 
-      <div className="bg-muted/50 flex flex-col gap-3 rounded-xl border p-5">
-        <h2 className="text-sm font-semibold">How it works</h2>
-        <ol className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+      <div className="seam flex flex-col gap-4 pt-8">
+        <h2 className="font-display text-2xl leading-tight">How it works</h2>
+        <ol className="grid grid-cols-1 gap-6 text-sm sm:grid-cols-3">
           <Step number={1} title="Set your starting point">
             Starting balance, start date and a horizon of 13 weeks, 6 or 12 months.
           </Step>
@@ -313,7 +306,7 @@ function LandingHero({
             Recurring items, one-off items and invoices with their payment delays.
           </Step>
           <Step number={3} title="Read the projection">
-            Balance chart, cash-out date, weekly table — then test a scenario.
+            Balance chart, cash-out date and a weekly table. Then test a scenario.
           </Step>
         </ol>
       </div>
@@ -332,12 +325,10 @@ function KindStartCard({
   onStarter: (kind: ForecastKind) => void;
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-xl border p-4">
+    <div className="bg-card shadow-rest lift flex flex-col gap-4 rounded-3xl border p-6">
       <div className="flex flex-col gap-1">
-        <h2 className="font-display text-xl leading-tight tracking-tight">
-          {KIND_LABELS[kind]} forecast
-        </h2>
-        <p className="text-muted-foreground text-xs leading-relaxed">
+        <h2 className="font-display text-2xl leading-tight">{KIND_LABELS[kind]} forecast</h2>
+        <p className="text-muted-foreground text-sm leading-6">
           {KIND_DESCRIPTIONS[kind]}
         </p>
       </div>
@@ -355,20 +346,11 @@ function KindStartCard({
   );
 }
 
-function FeatureCard({
-  icon,
-  title,
-  description,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}) {
+function FeatureCard({ title, description }: { title: string; description: string }) {
   return (
-    <div className="flex flex-col gap-2 rounded-xl border p-4">
-      <span className="text-primary">{icon}</span>
-      <h3 className="text-sm font-medium">{title}</h3>
-      <p className="text-muted-foreground text-xs leading-relaxed">{description}</p>
+    <div className="flex flex-col gap-1.5">
+      <h3 className="font-display text-xl leading-tight">{title}</h3>
+      <p className="text-muted-foreground text-sm leading-6">{description}</p>
     </div>
   );
 }
@@ -383,17 +365,13 @@ function Step({
   children: React.ReactNode;
 }) {
   return (
-    <li className="flex gap-3">
-      <span
-        className="bg-primary text-primary-foreground flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
-        aria-hidden="true"
-      >
-        {number}
+    <li className="flex flex-col gap-1">
+      {/* A woven label, not a filled disc. */}
+      <span className="text-accent-text font-mono text-xs" aria-hidden="true">
+        {String(number).padStart(2, "0")}
       </span>
-      <span className="flex flex-col gap-0.5">
-        <span className="font-medium">{title}</span>
-        <span className="text-muted-foreground text-xs leading-relaxed">{children}</span>
-      </span>
+      <span className="font-medium">{title}</span>
+      <span className="text-muted-foreground leading-6">{children}</span>
     </li>
   );
 }
@@ -521,7 +499,7 @@ function EmptyForecasts({
 }) {
   if (archived) {
     return (
-      <p className="text-muted-foreground rounded-xl border border-dashed p-6 text-sm">
+      <p className="text-muted-foreground rounded-3xl border border-dashed border-seam p-6 text-sm">
         No archived forecasts.
       </p>
     );
@@ -529,14 +507,14 @@ function EmptyForecasts({
 
   if (filtered) {
     return (
-      <p className="text-muted-foreground rounded-xl border border-dashed p-6 text-sm">
+      <p className="text-muted-foreground rounded-3xl border border-dashed border-seam p-6 text-sm">
         No forecasts of that kind. Switch the filter back to “All”, or create one below.
       </p>
     );
   }
 
   return (
-    <div className="flex flex-col items-start gap-4 rounded-xl border border-dashed p-6">
+    <div className="flex flex-col items-start gap-4 rounded-3xl border border-dashed border-seam p-6">
       <div className="flex flex-col gap-1">
         <p className="text-sm font-medium">No forecasts yet</p>
         <p className="text-muted-foreground max-w-prose text-xs leading-relaxed">
@@ -568,7 +546,7 @@ function LoadingList() {
     <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2" aria-hidden="true">
       {[0, 1].map((index) => (
         <li key={index}>
-          <div className="bg-muted/40 h-44 animate-pulse rounded-xl border" />
+          <div className="bg-muted/40 h-44 animate-pulse rounded-3xl border" />
         </li>
       ))}
       <li className="sr-only" role="status">

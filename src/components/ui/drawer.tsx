@@ -71,7 +71,7 @@ export function DrawerTitle({
 }: React.ComponentProps<typeof DialogPrimitive.Title>) {
   return (
     <DialogPrimitive.Title
-      className={cn("font-display text-lg leading-tight tracking-tight", className)}
+      className={cn("font-display text-lg leading-tight", className)}
       {...props}
     />
   );

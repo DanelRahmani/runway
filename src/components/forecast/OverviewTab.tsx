@@ -426,7 +426,7 @@ export function ProjectionTable({
                       {/* The count is what makes a short period obvious: a month that
                           reports no income is not broken, it is nine days long. */}
                       {isPartialPeriod(period, granularity) ? (
-                        <span className="text-[0.625rem] tracking-wide whitespace-nowrap uppercase">
+                        <span className="font-mono text-[0.625rem] whitespace-nowrap">
                           {periodDayCount(period)} days
                         </span>
                       ) : null}

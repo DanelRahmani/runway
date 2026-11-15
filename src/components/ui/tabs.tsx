@@ -72,7 +72,7 @@ export function TabsList({
       ref={listRef}
       data-slot="tabs-list"
       className={cn(
-        "bg-muted text-muted-foreground relative inline-flex h-9 w-fit items-center justify-start gap-1 rounded-lg p-1",
+        "text-muted-foreground relative inline-flex h-10 w-fit items-center justify-start gap-1 rounded-full border bg-transparent p-1",
         className,
       )}
       {...props}
@@ -81,7 +81,7 @@ export function TabsList({
       <span
         aria-hidden="true"
         data-slot="tabs-indicator"
-        className="bg-accent/15 ring-accent/25 pointer-events-none absolute top-1 bottom-1 left-0 rounded-md ring-1 transition-[transform,width,opacity] duration-300 ease-out"
+        className="bg-secondary border-accent pointer-events-none absolute top-1 bottom-1 left-0 rounded-full border border-dashed transition-[transform,width,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
         style={
           {
             transform: `translateX(${box?.left ?? 0}px)`,
@@ -104,9 +104,9 @@ export function TabsTrigger({
       data-slot="tabs-trigger"
       className={cn(
         // Sits above the sliding pill, which is absolutely positioned behind the row.
-        "relative z-10 inline-flex flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-3 py-1 text-sm font-medium whitespace-nowrap transition-colors",
+        "relative z-10 inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border border-transparent px-3.5 py-1 text-sm font-medium whitespace-nowrap transition-colors",
         "text-muted-foreground hover:text-foreground",
-        "data-[state=active]:text-foreground",
+        "data-[state=active]:text-accent-text",
         "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",
         "disabled:pointer-events-none disabled:opacity-50",
         "[&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4",

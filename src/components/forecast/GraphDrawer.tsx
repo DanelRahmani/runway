@@ -110,10 +110,10 @@ function Figure({
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <dt className="text-muted-foreground font-mono text-[0.6875rem] font-medium tracking-wide uppercase">
+      <dt className="text-muted-foreground font-mono text-xs">
         {label}
       </dt>
-      <dd className={cn("font-display tnum text-lg leading-tight", valueClassName)}>{children}</dd>
+      <dd className={cn("font-figure tnum text-lg leading-tight", valueClassName)}>{children}</dd>
     </div>
   );
 }
